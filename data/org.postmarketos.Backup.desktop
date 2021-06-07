@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Backup
+Encoding=UTF-8
+Version=1.0
+Type=Application
+Terminal=false
+Exec=pmos-backup
+GenericName=Backup
+Icon=org.postmarketos.Backup
+Categories=GTK;GNOME;Utility
+X-DBUS-ServiceName=org.postmarketos.Backup

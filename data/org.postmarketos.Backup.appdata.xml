@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2021 Martijn Braam -->
+<component type="desktop-application">
+    <id>org.postmarketos.Backup</id>
+    <metadata_license>CC0-1.0</metadata_license>
+    <project_license>GPL-3.0</project_license>
+    <name>Backup</name>
+    <summary>postmarketOS Backup and restore tool</summary>
+    <description>
+        <p>
+            A backup application that integrates with apk to quickly backup and restore your system
+            state in postmarketOS
+        </p>
+    </description>
+    <launchable type="desktop-id">org.postmarketos.Backup.desktop</launchable>
+    <provides>
+        <binary>pmos-backup</binary>
+    </provides>
+    <screenshots>
+        <screenshot type="default">
+            <image>http://brixitcdn.net/metainfo/backup.png</image>
+        </screenshot>
+    </screenshots>
+    <url type="homepage">https://gitlab.com/postmarketOS/backup</url>
+    <content_rating type="oars-1.1"/>
+    <releases>
+        <release version="0.1.0" date="2021-05-21">
+            <description>
+                <p>
+                    First release
+                </p>
+            </description>
+        </release>
+    </releases>
+</component>
