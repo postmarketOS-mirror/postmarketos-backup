@@ -14,7 +14,8 @@
     </description>
     <launchable type="desktop-id">org.postmarketos.Backup.desktop</launchable>
     <provides>
-        <binary>pmos-backup</binary>
+	<binary>pmos-backup</binary>
+        <binary>pmos-backup-gui</binary>
     </provides>
     <screenshots>
         <screenshot type="default">

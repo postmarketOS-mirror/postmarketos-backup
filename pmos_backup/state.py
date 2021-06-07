@@ -2,20 +2,16 @@ import os
 import subprocess
 import shutil
 import glob
+import json
 
-_progress_cb = None
 
-
-def set_progress_callback(callback):
-    global _progress_cb
-    _progress_cb = callback
-
+_progress_json = False
 
 def _progress(value, label):
-    if _progress_cb is None:
-        return
-
-    _progress_cb(value, label)
+    if _progress_json:
+        print(json.dumps({"value": value, "label": label})) 
+    else:
+        print(label)
 
 
 def parse_apk_cache():
@@ -121,6 +117,23 @@ def save_system_state(target, measure=False):
         }
 
 
+def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(description="postmarketOS backup utility backend")
+    parser.add_argument("target", help="Target directory for the backup")
+    parser.add_argument("--measure", help="Measure backup size instead of storing it", 
+            action="store_true")
+    parser.add_argument("--restore", help="Restore instead of backup",
+            action="store_true")
+
+    args = parser.parse_args()
+    
+    if args.restore:
+        print("TODO")
+    else:
+        save_system_state(args.target, args.measure)
+
+
 if __name__ == '__main__':
-    subprocess.run(['rm', '-rf', '/tmp/test'])
-    print(save_system_state('/tmp/test', measure=True))
+    main()

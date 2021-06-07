@@ -258,14 +258,15 @@
                                                       </packing>
                                                     </child>
                                                     <child>
-                                                      <object class="GtkButton">
+                                                      <object class="GtkButton" id="backup_start">
                                                         <property name="label" translatable="yes">Backup</property>
                                                         <property name="visible">True</property>
                                                         <property name="can-focus">True</property>
                                                         <property name="receives-default">True</property>
                                                         <style>
                                                           <class name="suggested-action"/>
-                                                        </style>
+						        </style>
+							<signal name="clicked" handler="on_backup_start_clicked" swapped="no"/>
                                                       </object>
                                                       <packing>
                                                         <property name="expand">False</property>

@@ -25,6 +25,14 @@ configure_file(
     install_dir: get_option('bindir')
 )
 
+configure_file(
+    input: 'pmos-backup-gui.in',
+    output: 'pmos-backup-gui',
+    configuration: conf,
+    install: true,
+    install_dir: get_option('bindir')
+)
+
 sources = [
     '__init__.py',
     '__main__.py',
