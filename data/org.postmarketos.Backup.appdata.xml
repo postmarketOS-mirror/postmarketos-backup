@@ -22,7 +22,7 @@
             <image>http://brixitcdn.net/metainfo/backup.png</image>
         </screenshot>
     </screenshots>
-    <url type="homepage">https://gitlab.com/postmarketOS/backup</url>
+    <url type="homepage">https://gitlab.com/postmarketOS/postmarketos-backup</url>
     <content_rating type="oars-1.1"/>
     <releases>
         <release version="0.1.0" date="2021-05-21">
