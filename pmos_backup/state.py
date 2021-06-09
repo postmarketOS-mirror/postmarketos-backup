@@ -196,12 +196,92 @@ def write_final_metadata(target, version):
         handle.write(json.dumps(metadata))
 
 
+def removeprefix(data, prefix):
+    if data.startswith(prefox):
+        return data[len(prefix):]
+    return data
+
+
+def restore_config(source):
+    _progress(10, "Restoring global config")
+    prefix = os.path.join(source, 'state/etc')
+    for path in glob.glob(os.path.join(prefix, '*')):
+        target_path = os.path.join('/etc', removeprefix(path, prefix))
+        os.makedirs(os.path.dirname(target_path))
+        shutil.copyfile(path, target_path, follow_symlinks=False)
+
+
+def restore_system(source):
+    _progress(20, "Restoring system files")
+    dirs = list(glob.glob(os.path.join(source, 'state/*/')))
+    dirs = list(map(os.path.dirname, dirs))
+    dirs = list(map(os.path.basename, dirs))
+    dirs = filter(lambda x: x not in ['etc', 'cache'], dirs)
+
+    for state_dir in dirs:
+        prefix = os.path.join(source, 'state', state_dir)
+        for path in glob.glob(os.path.join(prefix, '*')):
+            target_path = os.path.join('/', state_dir, removeprefix(path, prefix))
+            os.makedirs(os.path.dirname(target_path))
+            shutil.copyfile(path, target_path, follow_symlinks=False)
+
+
+def restore_packages(source, restore_sideloaded=True):
+    _progress(50, "Restoring packages")
+    shutil.copyfile(os.path.join(source, 'state/repositories'), '/etc/apk/repositories')
+    worldfile = os.path.join(source, 'state/world')
+    if restore_sideloaded:
+        shutil.copyfile(worldfile, '/etc/apk/world')
+        shutil.copytree(os.path.join(source, 'state/cache'), '/etc/apk/cache',
+                dirs_exist_ok=True)
+    else:
+        pkgs = []
+        with open(worldfile) as handle:
+            for line in handle.readlines():
+                if '><' not in line:
+                    pkgs.append(line.strip())
+        with open('/etc/apk/world', 'w') as handle:
+            handle.write('\n'.join(pkgs))
+
+    subprocess.run(['apk', 'fix'])
+
+
+def restore_homedirs(source):
+    errors = []
+    _progress(50, "Copying homedirs")
+
+    # Count the total files for progress calculations
+    count = 0
+    for root, dirs, files in os.walk(os.path.join(source, 'home')):
+        for fname in files:
+            count += 1
+            
+    # Do the actual copy
+    done = 0
+    for root, dirs, files in os.walk(os.path.join(source, 'home'), topdown=True):
+        target_dir = removeprefix(root, source)
+        os.makedirs(target_dir)
+
+        for fname in files:
+            path = os.path.join(root, fname)
+            try:
+                shutil.copyfile(path, os.path.join(target_dir, fname), follow_symlinks=False)
+            except Exception as e:
+                errors.append(str(e))
+
+            done += 1
+
+            # Rate limit the progress updates to save resources
+            if done % 50 == 0:
+                _progress(int(50 + (done / count * 50.0)), "Copying homedirs")
+
+
 def main(version):
     global _progress_json
     import argparse
 
     parser = argparse.ArgumentParser(description="postmarketOS backup utility backend")
-    parser.add_argument("target", help="Target directory for the backup")
+    parser.add_argument("target", help="Target/source directory for the backup")
     parser.add_argument("--measure", help="Measure backup size instead of storing it", 
             action="store_true")
     parser.add_argument("--restore", help="Restore instead of backup",
@@ -220,6 +300,8 @@ def main(version):
             action="store_false", dest="homedir")
     parser.add_argument("--no-apks", help="Don't backup sideloaded apks",
             action="store_false", dest="apks")
+    parser.add_argument("--no-pkgs", help="Don't restore packages (unused in backup)",
+            action="store_false", dest="pkgs")
 
     args = parser.parse_args()
     
@@ -227,7 +309,14 @@ def main(version):
         _progress_json = True
 
     if args.restore:
-        print("TODO")
+        if args.config:
+            restore_config(args.target)
+        if args.system:
+            restore_system(args.target)
+        if args.pkgs:
+            restore_packages(args.target, args.apks)
+        if args.homedir:
+            restore_homedirs(args.target)
     else:
         save_system_state(args.target, args.measure, args.config, args.system,
                           args.apks, args.homedir)
