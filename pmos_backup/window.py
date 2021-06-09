@@ -252,9 +252,19 @@ class BackupWindow:
         if response != Gtk.ResponseType.OK:
             return
 
+        args = ['--restore']
+        if not dialog.do_config.get_active():
+            args.append('--no-config')
+        if not dialog.do_system.get_active():
+            args.append('--no-system')
+        if not dialog.do_pkgs.get_active():
+            args.append('--no-packages')
+        if not dialog.do_apks.get_active():
+            args.append('--no-apks')
+        if not dialog.do_homedirs.get_active():
+            args.append('--no-homedirs')
         dialog.destroy()
 
-        args = ['--restore']
 
         thread = BackupThread(target, self.progress_update, args)
         thread.start()
