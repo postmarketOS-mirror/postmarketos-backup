@@ -55,14 +55,14 @@ def save_system_state(target, measure=False, do_config=True, do_system=True, do_
             state, path = line.split(' ', maxsplit=1)
             if state in ['A', 'U']:
                 source = os.path.join('/', path)
-                target = os.path.join(statedir, path)
+                targetf = os.path.join(statedir, path)
                 if measure:
                     if os.path.exists(source):
                         config_size += os.stat(source).st_size
                 else:
-                    if not os.path.isdir(os.path.dirname(target)):
-                        os.makedirs(os.path.dirname(target))
-                    shutil.copyfile(source, target, follow_symlinks=False)
+                    if not os.path.isdir(os.path.dirname(targetf)):
+                        os.makedirs(os.path.dirname(targetf))
+                    shutil.copyfile(source, targetf, follow_symlinks=False)
 
     # Find modified system files
     system_size = 0
@@ -82,10 +82,10 @@ def save_system_state(target, measure=False, do_config=True, do_system=True, do_
                 if measure:
                     system_size += os.stat(source).st_size
                 else:
-                    target = os.path.join(statedir, path)
-                    if not os.path.isdir(os.path.dirname(target)):
-                        os.makedirs(os.path.dirname(target))
-                    shutil.copyfile(source, target, follow_symlinks=False)
+                    targetf = os.path.join(statedir, path)
+                    if not os.path.isdir(os.path.dirname(targetf)):
+                        os.makedirs(os.path.dirname(targetf))
+                    shutil.copyfile(source, targetf, follow_symlinks=False)
 
     # Try to get sideloaded apks from the apk cache. This is not perfect yet since we can't match
     # up the version hash in the world file to the exact .apk file that was installed since the
@@ -121,6 +121,11 @@ def save_system_state(target, measure=False, do_config=True, do_system=True, do_
             "cache": cache_size,
         }
     else:
+        logfile = os.path.join(target, 'backup.log')
+        with open(logfile, 'a') as handle:
+            handle.write('*** Copy system state ***\n')
+            for error in errors:
+                handle.write(f'{error}\n')
         return {
             "errors": errors
         }
@@ -159,8 +164,39 @@ def save_homedirs(target):
             if done % 50 == 0:
                 _progress(int(50 + (done / count * 50.0)), "Copying homedirs")
 
+    logfile = os.path.join(target, 'backup.log')
+    with open(logfile, 'a') as handle:
+        handle.write('*** Copy homedir contents ***\n')
+        for error in errors:
+            handle.write(f'{error}\n')
 
-def main():
+
+def write_final_metadata(target, version):
+    _progress(100, "Writing final metadata")
+
+    # Use rhash to generate a sha1sum compatible checksums file of the entire backup
+    hashes = subprocess.run(['rhash', '--sha1', '-r', '.'], cwd=target,
+                                    universal_newlines=True, stdout=subprocess.PIPE)
+    hashfile = os.path.join(target, 'checksums.sha1')
+    with open(hashfile, 'w') as handle:
+        handle.write(hashes.stdout)
+
+    # Save backup metadata in a file for quick access in the GUI
+    size = subprocess.check_output(['du', '-sh', target], universal_newlines=True)
+    size, path = size.split('\t', maxsplit=1)
+
+    metadata = {
+        "label": os.path.basename(target),
+        "size": size,
+        "version": version
+    }
+
+    metafile = os.path.join(target, 'metadata.json')
+    with open(metafile, 'w') as handle:
+        handle.write(json.dumps(metadata))
+
+
+def main(version):
     global _progress_json
     import argparse
 
@@ -198,6 +234,8 @@ def main():
         if args.homedir:
             save_homedirs(args.target)
 
+        write_final_metadata(args.target, version)
+
 
 if __name__ == '__main__':
-    main()
+    main(None)

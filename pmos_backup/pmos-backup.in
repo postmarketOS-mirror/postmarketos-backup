@@ -14,4 +14,4 @@ signal.signal(signal.SIGINT, signal.SIG_DFL)
 if __name__ == '__main__':
     import pmos_backup
     from pmos_backup import state
-    sys.exit(pmos_backup.state.main())
+    sys.exit(pmos_backup.state.main(VERSION))
