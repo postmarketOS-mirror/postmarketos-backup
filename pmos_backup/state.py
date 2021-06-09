@@ -1,4 +1,5 @@
 import os
+import sys
 import subprocess
 import shutil
 import glob
@@ -9,9 +10,10 @@ _progress_json = False
 
 def _progress(value, label):
     if _progress_json:
-        print(json.dumps({"value": value, "label": label})) 
+        print(json.dumps({"progress": value, "label": label})) 
+        sys.stdout.flush()
     else:
-        print(label)
+        sys.stderr.write(label + "\n")
 
 
 def parse_apk_cache():
@@ -118,6 +120,7 @@ def save_system_state(target, measure=False):
 
 
 def main():
+    global _progress_json
     import argparse
 
     parser = argparse.ArgumentParser(description="postmarketOS backup utility backend")
@@ -126,9 +129,13 @@ def main():
             action="store_true")
     parser.add_argument("--restore", help="Restore instead of backup",
             action="store_true")
+    parser.add_argument("--json", help="Output json progress", action="store_true")
 
     args = parser.parse_args()
     
+    if args.json:
+        _progress_json = True
+
     if args.restore:
         print("TODO")
     else:

@@ -1,6 +1,8 @@
 import os
 import threading
 import datetime
+import subprocess
+import json
 
 import pmos_backup.state as state
 
@@ -21,16 +23,52 @@ class BackupThread(threading.Thread):
         self.callback = callback
 
     def run(self):
-        state.set_progress_callback(self._progress)
-        state.save_system_state(self.target)
+        cmd = ['pkexec', 'pmos-backup', '--json', self.target]
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True)
+        while True:
+            line = p.stdout.readline()
+            if not line:
+                print("Backup subprocess ended")
+                GLib.idle_add(self.callback, None)
+                break
+            if line.startswith("{"):
+                packet = json.loads(line)
+                if "progress"  in packet:
+                    self._progress(packet["progress"], packet["label"])
+            else:
+                print(">>> " + line)
 
-    def _progress(value, label):
+    def _progress(self, value, label):
         GLib.idle_add(self.callback, (value, label))
+
+
+class ProgressDialog(Gtk.Dialog):
+    def __init__(self, parent, title):
+        Gtk.Dialog.__init__(self, title=title, transient_for=parent, flags=0)
+
+        self.label = Gtk.Label(label="Starting...")
+        self.bar = Gtk.ProgressBar()
+        self.bar.set_show_text(True)
+
+        self.label.set_margin_start(18)
+        self.label.set_margin_end(18)
+        self.label.set_margin_top(18)
+        self.label.set_margin_bottom(18)
+        self.bar.set_margin_start(18)
+        self.bar.set_margin_end(18)
+        self.bar.set_margin_top(18)
+        self.bar.set_margin_bottom(18)
+
+        box = self.get_content_area()
+        box.add(self.label)
+        box.add(self.bar)
+        self.show_all()
 
 
 class BackupWindow:
     def __init__(self, application):
         self.application = application
+        self.dialog = None
         Handy.init()
 
         builder = Gtk.Builder()
@@ -66,14 +104,19 @@ class BackupWindow:
         Gtk.main_quit()
 
     def progress_update(self, data):
+        if data is None:
+            self.dialog.destroy()
+            return
         value, label = data
-        print(value, label)
+        self.dialog.label.set_text(label)
+        self.dialog.bar.set_fraction(value/100.0)
 
     def on_backup_start_clicked(self, widget):
         name = self.new_backup_label.get_text().strip()
         stamp = datetime.date.today().strftime('%Y%m%d%H%M')
         target = os.path.join('/var/backup/', f"{stamp} {name}")
         print(f"Starting backup to {target}")
-        os.makedirs(target)
         thread = BackupThread(target, self.progress_update)
         thread.start()
+        self.dialog = ProgressDialog(self.window, "Making new backup")
+        self.dialog.run()
