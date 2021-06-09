@@ -3,6 +3,7 @@ import threading
 import datetime
 import subprocess
 import json
+import glob
 
 import pmos_backup.state as state
 
@@ -87,9 +88,11 @@ class BackupWindow:
 
         self.backup_start = builder.get_object("backup_start")
         self.new_backup_label = builder.get_object("new_backup_label")
+        self.backups = builder.get_object("backups")
 
         self.apply_css(self.window, self.provider)
         self.window.show()
+        self.fill_backup_list()
         Gtk.main()
 
     def apply_css(self, widget, provider):
@@ -103,9 +106,53 @@ class BackupWindow:
     def on_main_window_destroy(self, widget):
         Gtk.main_quit()
 
+    def fill_backup_list(self):
+        for child in self.backups:
+            child.destroy()
+
+        for path in glob.glob('/var/backup/*/metadata.json'):
+            with open(path) as handle:
+                metadata = json.loads(handle.read())
+
+            distro = "Unknown OS"
+            with open(os.path.join(os.path.dirname(path), 'state/os-release')) as handle:
+                for line in handle.readlines():
+                    if line.startswith("PRETTY_NAME="):
+                        key, val = line.split('=', maxsplit=1)
+                        distro = val.replace('"', '').strip()
+
+            row = Gtk.ListBoxRow()
+            vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+            vbox.set_margin_start(6)
+            vbox.set_margin_end(6)
+            vbox.set_margin_top(6)
+            vbox.set_margin_bottom(6)
+            row.add(vbox)
+
+            label = Gtk.Label(label=metadata['label'], xalign=0.0)
+            size = Gtk.Label(label=metadata['size'], xalign=0.0)
+            distrolabel = Gtk.Label(label=distro, xalign=1.0)
+            size.get_style_context().add_class('dim-label')
+            distrolabel.get_style_context().add_class('dim-label')
+            vbox.pack_start(label, True, True, 0)
+            hbox = Gtk.Box()
+            vbox.pack_start(hbox, True, True, 0)
+            hbox.pack_start(size, True, True, 0)
+            hbox.pack_start(distrolabel, True, True, 0)
+            self.backups.add(row)
+
+        def header(row, before, user_data):
+            if before and not row.get_header():
+                sep = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
+                row.set_header(sep)
+
+        self.backups.set_header_func(header, None)
+        self.backups.show_all()
+
     def progress_update(self, data):
         if data is None:
             self.dialog.destroy()
+            self.fill_backup_list()
             return
         value, label = data
         self.dialog.label.set_text(label)
