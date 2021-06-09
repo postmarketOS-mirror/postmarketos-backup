@@ -70,7 +70,7 @@ class ProgressDialog(Gtk.Dialog):
 class RestoreDialog(Gtk.Dialog):
     def __init__(self, parent):
         Gtk.Dialog.__init__(self, title="Restore", transient_for=parent, flags=0)
-
+        self.wrong_branch = False
         self.add_buttons(
             Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_EXECUTE, Gtk.ResponseType.OK
         )
@@ -114,7 +114,7 @@ class RestoreDialog(Gtk.Dialog):
 
     def on_pkgs_toggled(self, widget):
         active = widget.get_active()
-        self.do_apks.set_sensitive(active)
+        self.do_apks.set_sensitive(active and not self.wrong_branch)
         if not active:
             self.do_apks.set_active(False)
 
@@ -164,7 +164,7 @@ class BackupWindow:
     def on_main_window_destroy(self, widget):
         Gtk.main_quit()
 
-    def make_backup_list_row(self, path, metadata, distro):
+    def make_backup_list_row(self, path, metadata, distro, arch, current_distro):
         row = Gtk.ListBoxRow()
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         vbox.set_margin_start(6)
@@ -183,6 +183,22 @@ class BackupWindow:
         vbox.pack_start(hbox, True, True, 0)
         hbox.pack_start(size, True, True, 0)
         hbox.pack_start(distrolabel, True, True, 0)
+
+        row.wrong_arch = False
+        row.wrong_branch = False
+        if 'arch' in metadata and metadata['arch'] != arch:
+            warn = Gtk.Label(label=f"This backup is for another CPU ({metadata['arch']})")
+            warn.set_line_wrap(True)
+            warn.get_style_context().add_class('error')
+            vbox.pack_start(warn, True, True, 0)
+            row.wrong_arch = True
+        if distro != current_distro:
+            warn = Gtk.Label(label=f"This backup is for another version.")
+            warn.set_line_wrap(True)
+            warn.get_style_context().add_class('error')
+            vbox.pack_start(warn, True, True, 0)
+            row.wrong_branch = True
+
         row.path = path
         return row
 
@@ -191,6 +207,14 @@ class BackupWindow:
             child.destroy()
         for child in self.backups_restore:
             child.destroy()
+
+        with open('/etc/apk/arch') as handle:
+            arch = handle.read().strip()
+        with open('/etc/os-release') as handle:
+            for line in handle.readlines():
+                if line.startswith("PRETTY_NAME="):
+                    key, val = line.split('=', maxsplit=1)
+                    current_distro = val.replace('"', '').strip()
 
         for path in sorted(glob.glob('/var/backup/*/metadata.json'), reverse=True):
             with open(path) as handle:
@@ -203,9 +227,9 @@ class BackupWindow:
                         key, val = line.split('=', maxsplit=1)
                         distro = val.replace('"', '').strip()
 
-            row = self.make_backup_list_row(os.path.dirname(path), metadata, distro)
+            row = self.make_backup_list_row(os.path.dirname(path), metadata, distro, arch, current_distro)
             self.backups.add(row)
-            row = self.make_backup_list_row(os.path.dirname(path), metadata, distro)
+            row = self.make_backup_list_row(os.path.dirname(path), metadata, distro, arch, current_distro)
             self.backups_restore.add(row)
 
         def header(row, before, user_data):
@@ -248,6 +272,14 @@ class BackupWindow:
 
     def on_restore_row_activate(self, widget, row):
         dialog = RestoreDialog(self.window)
+
+        if row.wrong_arch:
+            dialog.do_pkgs.set_sensitive(False)
+
+        if row.wrong_branch:
+            dialog.wrong_branch = True
+            dialog.do_system.set_sensitive(False)
+
         response = dialog.run()
         if response != Gtk.ResponseType.OK:
             return

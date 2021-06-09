@@ -185,10 +185,14 @@ def write_final_metadata(target, version):
     size = subprocess.check_output(['du', '-sh', target], universal_newlines=True)
     size, path = size.split('\t', maxsplit=1)
 
+    with open('/etc/apk/arch') as handle:
+        arch = handle.read().strip()
+
     metadata = {
         "label": os.path.basename(target),
         "size": size,
-        "version": version
+        "version": version,
+        "arch": arch
     }
 
     metafile = os.path.join(target, 'metadata.json')
