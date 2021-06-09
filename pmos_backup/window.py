@@ -18,13 +18,14 @@ from gi.repository import Handy
 
 
 class BackupThread(threading.Thread):
-    def __init__(self, target, callback):
+    def __init__(self, target, callback, args=None):
         threading.Thread.__init__(self)
         self.target = target
         self.callback = callback
+        self.args = args or []
 
     def run(self):
-        cmd = ['pkexec', 'pmos-backup', '--json', self.target]
+        cmd = ['pkexec', 'pmos-backup', '--json'] + self.args + [self.target]
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True)
         while True:
             line = p.stdout.readline()
@@ -88,6 +89,10 @@ class BackupWindow:
 
         self.backup_start = builder.get_object("backup_start")
         self.new_backup_label = builder.get_object("new_backup_label")
+        self.new_backup_config = builder.get_object("new_backup_config")
+        self.new_backup_system = builder.get_object("new_backup_system")
+        self.new_backup_apks = builder.get_object("new_backup_apks")
+        self.new_backup_homedirs = builder.get_object("new_backup_homedirs")
         self.backups = builder.get_object("backups")
 
         self.apply_css(self.window, self.provider)
@@ -110,7 +115,7 @@ class BackupWindow:
         for child in self.backups:
             child.destroy()
 
-        for path in glob.glob('/var/backup/*/metadata.json'):
+        for path in sorted(glob.glob('/var/backup/*/metadata.json'), reverse=True):
             with open(path) as handle:
                 metadata = json.loads(handle.read())
 
@@ -160,10 +165,19 @@ class BackupWindow:
 
     def on_backup_start_clicked(self, widget):
         name = self.new_backup_label.get_text().strip()
-        stamp = datetime.date.today().strftime('%Y%m%d%H%M')
+        stamp = datetime.datetime.today().strftime('%Y%m%d%H%M')
         target = os.path.join('/var/backup/', f"{stamp} {name}")
         print(f"Starting backup to {target}")
-        thread = BackupThread(target, self.progress_update)
+        args = []
+        if not self.new_backup_config.get_active():
+            args.append('--no-config')
+        if not self.new_backup_system.get_active():
+            args.append('--no-system')
+        if not self.new_backup_apks.get_active():
+            args.append('--no-apks')
+        if not self.new_backup_homedirs.get_active():
+            args.append('--no-homedirs')
+        thread = BackupThread(target, self.progress_update, args)
         thread.start()
         self.dialog = ProgressDialog(self.window, "Making new backup")
         self.dialog.run()

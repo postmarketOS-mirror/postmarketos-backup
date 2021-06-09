@@ -188,7 +188,7 @@
                                                       </packing>
                                                     </child>
                                                     <child>
-                                                      <object class="GtkCheckButton" id="new_backup_config1">
+                                                      <object class="GtkCheckButton" id="new_backup_system">
                                                         <property name="label" translatable="yes">Changed system files</property>
                                                         <property name="visible">True</property>
                                                         <property name="can-focus">True</property>
@@ -203,7 +203,7 @@
                                                       </packing>
                                                     </child>
                                                     <child>
-                                                      <object class="GtkCheckButton" id="new_backup_config2">
+                                                      <object class="GtkCheckButton" id="new_backup_apks">
                                                         <property name="label" translatable="yes">Sideloaded packages</property>
                                                         <property name="visible">True</property>
                                                         <property name="can-focus">True</property>
@@ -218,7 +218,7 @@
                                                       </packing>
                                                     </child>
                                                     <child>
-                                                      <object class="GtkCheckButton" id="new_backup_config3">
+                                                      <object class="GtkCheckButton" id="new_backup_homedirs">
                                                         <property name="label" translatable="yes">Home directory</property>
                                                         <property name="visible">True</property>
                                                         <property name="can-focus">True</property>

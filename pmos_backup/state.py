@@ -216,7 +216,7 @@ def main(version):
             action="store_false", dest="config")
     parser.add_argument("--no-system", help="Don't backup /usr changes",
             action="store_false", dest="system")
-    parser.add_argument("--no-homedir", help="Don't backup /home",
+    parser.add_argument("--no-homedirs", help="Don't backup /home",
             action="store_false", dest="homedir")
     parser.add_argument("--no-apks", help="Don't backup sideloaded apks",
             action="store_false", dest="apks")
