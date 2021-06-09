@@ -297,6 +297,8 @@ class BackupWindow:
             args.append('--no-homedirs')
         dialog.destroy()
 
+        if row.wrong_branch:
+            args.append('--cross-branch')
 
         thread = BackupThread(target, self.progress_update, args)
         thread.start()

@@ -230,9 +230,14 @@ def restore_system(source):
             shutil.copyfile(path, target_path, follow_symlinks=False)
 
 
-def restore_packages(source, restore_sideloaded=True):
+def restore_packages(source, restore_sideloaded=True, cross_branch=False):
     _progress(50, "Restoring packages")
-    shutil.copyfile(os.path.join(source, 'state/repositories'), '/etc/apk/repositories')
+
+    # Don't restore the repositories file when the backup is for another branch since that
+    # will cause a dist-upgrade/downgrade on running apk fix
+    if not cross_branch:
+        shutil.copyfile(os.path.join(source, 'state/repositories'), '/etc/apk/repositories')
+
     worldfile = os.path.join(source, 'state/world')
     if restore_sideloaded:
         shutil.copyfile(worldfile, '/etc/apk/world')
@@ -306,6 +311,8 @@ def main(version):
             action="store_false", dest="apks")
     parser.add_argument("--no-pkgs", help="Don't restore packages (unused in backup)",
             action="store_false", dest="pkgs")
+    parser.add_argument("--cross-branch", help="Don't restore the repositories file",
+            action="store_true", dest="cross_branch")
 
     args = parser.parse_args()
     
@@ -318,7 +325,7 @@ def main(version):
         if args.system:
             restore_system(args.target)
         if args.pkgs:
-            restore_packages(args.target, args.apks)
+            restore_packages(args.target, args.apks, args.cross_branch)
         if args.homedir:
             restore_homedirs(args.target)
     else:
