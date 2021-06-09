@@ -67,6 +67,58 @@ class ProgressDialog(Gtk.Dialog):
         self.show_all()
 
 
+class RestoreDialog(Gtk.Dialog):
+    def __init__(self, parent):
+        Gtk.Dialog.__init__(self, title="Restore", transient_for=parent, flags=0)
+
+        self.add_buttons(
+            Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_EXECUTE, Gtk.ResponseType.OK
+        )
+
+        self.set_default_size(300, 300)
+
+        self.label = Gtk.Label(label="Restoring a backup will overwrite your existing data and "
+                "can add or remove packages and configuration. This can not be undone.", xalign=0.0)
+
+        self.label.set_margin_start(18)
+        self.label.set_margin_end(18)
+        self.label.set_margin_top(18)
+        self.label.set_margin_bottom(18)
+        self.label.set_line_wrap(True)
+
+        frame = Gtk.Frame()
+        frame.get_style_context().add_class('view')
+        checks = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        checks.set_spacing(6)
+        frame.add(checks)
+
+        self.do_config = Gtk.CheckButton.new_with_label("Changed configuration")
+        self.do_system = Gtk.CheckButton.new_with_label("Changed system files")
+        self.do_pkgs = Gtk.CheckButton.new_with_label("Installed packages")
+        self.do_apks = Gtk.CheckButton.new_with_label("Sideloaded packages")
+        self.do_homedirs = Gtk.CheckButton.new_with_label("Home directories")
+
+        self.do_apks.set_sensitive(False)
+        self.do_pkgs.connect("toggled", self.on_pkgs_toggled)
+
+        checks.pack_start(self.do_config, False, False, 0)
+        checks.pack_start(self.do_system, False, False, 0)
+        checks.pack_start(self.do_pkgs, False, False, 0)
+        checks.pack_start(self.do_apks, False, False, 0)
+        checks.pack_start(self.do_homedirs, False, False, 0)
+        
+        box = self.get_content_area()
+        box.add(self.label)
+        box.add(frame)
+        self.show_all()
+
+    def on_pkgs_toggled(self, widget):
+        active = widget.get_active()
+        self.do_apks.set_sensitive(active)
+        if not active:
+            self.do_apks.set_active(False)
+
+
 class BackupWindow:
     def __init__(self, application):
         self.application = application
@@ -94,6 +146,7 @@ class BackupWindow:
         self.new_backup_apks = builder.get_object("new_backup_apks")
         self.new_backup_homedirs = builder.get_object("new_backup_homedirs")
         self.backups = builder.get_object("backups")
+        self.backups_restore = builder.get_object("backups_restore")
 
         self.apply_css(self.window, self.provider)
         self.window.show()
@@ -111,8 +164,32 @@ class BackupWindow:
     def on_main_window_destroy(self, widget):
         Gtk.main_quit()
 
+    def make_backup_list_row(self, path, metadata, distro):
+        row = Gtk.ListBoxRow()
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        vbox.set_margin_start(6)
+        vbox.set_margin_end(6)
+        vbox.set_margin_top(6)
+        vbox.set_margin_bottom(6)
+        row.add(vbox)
+
+        label = Gtk.Label(label=metadata['label'], xalign=0.0)
+        size = Gtk.Label(label=metadata['size'], xalign=0.0)
+        distrolabel = Gtk.Label(label=distro, xalign=1.0)
+        size.get_style_context().add_class('dim-label')
+        distrolabel.get_style_context().add_class('dim-label')
+        vbox.pack_start(label, True, True, 0)
+        hbox = Gtk.Box()
+        vbox.pack_start(hbox, True, True, 0)
+        hbox.pack_start(size, True, True, 0)
+        hbox.pack_start(distrolabel, True, True, 0)
+        row.path = path
+        return row
+
     def fill_backup_list(self):
         for child in self.backups:
+            child.destroy()
+        for child in self.backups_restore:
             child.destroy()
 
         for path in sorted(glob.glob('/var/backup/*/metadata.json'), reverse=True):
@@ -126,25 +203,10 @@ class BackupWindow:
                         key, val = line.split('=', maxsplit=1)
                         distro = val.replace('"', '').strip()
 
-            row = Gtk.ListBoxRow()
-            vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-            vbox.set_margin_start(6)
-            vbox.set_margin_end(6)
-            vbox.set_margin_top(6)
-            vbox.set_margin_bottom(6)
-            row.add(vbox)
-
-            label = Gtk.Label(label=metadata['label'], xalign=0.0)
-            size = Gtk.Label(label=metadata['size'], xalign=0.0)
-            distrolabel = Gtk.Label(label=distro, xalign=1.0)
-            size.get_style_context().add_class('dim-label')
-            distrolabel.get_style_context().add_class('dim-label')
-            vbox.pack_start(label, True, True, 0)
-            hbox = Gtk.Box()
-            vbox.pack_start(hbox, True, True, 0)
-            hbox.pack_start(size, True, True, 0)
-            hbox.pack_start(distrolabel, True, True, 0)
+            row = self.make_backup_list_row(os.path.dirname(path), metadata, distro)
             self.backups.add(row)
+            row = self.make_backup_list_row(os.path.dirname(path), metadata, distro)
+            self.backups_restore.add(row)
 
         def header(row, before, user_data):
             if before and not row.get_header():
@@ -152,7 +214,9 @@ class BackupWindow:
                 row.set_header(sep)
 
         self.backups.set_header_func(header, None)
+        self.backups_restore.set_header_func(header, None)
         self.backups.show_all()
+        self.backups_restore.show_all()
 
     def progress_update(self, data):
         if data is None:
@@ -180,4 +244,19 @@ class BackupWindow:
         thread = BackupThread(target, self.progress_update, args)
         thread.start()
         self.dialog = ProgressDialog(self.window, "Making new backup")
+        self.dialog.run()
+
+    def on_restore_row_activate(self, widget, row):
+        dialog = RestoreDialog(self.window)
+        response = dialog.run()
+        if response != Gtk.ResponseType.OK:
+            return
+
+        dialog.destroy()
+
+        args = ['--restore']
+
+        thread = BackupThread(target, self.progress_update, args)
+        thread.start()
+        self.dialog = ProgressDialog(self.window, "Restoring backup")
         self.dialog.run()
