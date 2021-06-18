@@ -335,6 +335,7 @@
                                               <object class="GtkListBox" id="backups">
                                                 <property name="visible">True</property>
                                                 <property name="can-focus">False</property>
+    						<signal name="row-activated" handler="on_backup_row_activate" swapped="no"/>
                                                 <child type="placeholder">
                                                   <object class="GtkLabel">
                                                     <property name="visible">True</property>
@@ -468,6 +469,7 @@
                                                 <property name="visible">True</property>
                                                 <property name="can-focus">True</property>
                                                 <property name="receives-default">True</property>
+    						<signal name="clicked" handler="on_import_button_clicked" swapped="no"/>
                                                 <style>
                                                   <class name="suggested-action"/>
                                                 </style>

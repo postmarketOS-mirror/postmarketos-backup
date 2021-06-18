@@ -5,6 +5,7 @@ import shutil
 import glob
 import json
 import pathlib
+import shlex
 
 
 _progress_json = False
@@ -26,6 +27,48 @@ def parse_apk_cache():
             result[pkgname] = []
         result[pkgname].append(path)
     return result
+
+
+def export_backup(source, target):
+    # Count files for progress
+    files = 0
+    for root, dirs, filenames in os.walk(source):
+        files += len(filenames)
+
+    cmd = ['tar', '-czvf', target, source]
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True)
+
+    done = 0
+    while True:
+        line = p.stdout.readline()
+        if not line:
+            return
+        done += 1
+
+        if done % 3 == 0:
+            _progress((done/files)*100, "Exporting")
+
+    # Change owner/group of the resulting backup archive to the
+    # owner of the directory it's in so users don't end up with
+    # a "locked" file when they save it in their homedir
+    stat = os.stat(os.path.dirname(target))
+    os.chown(target, stat.st_uid, stat.st_gid)
+
+
+def import_backup(source, target):
+    os.makedirs(target)
+    cmd = 'pv -n {} | tar -xzf - -C {}'.format(shlex.quote(source),
+            shlex.quote(target))
+
+    p = subprocess.Popen(cmd, shell=True, stderr=subprocess.PIPE, universal_newlines=True)
+
+    while True:
+        line = p.stderr.readline()
+        if not line:
+            return
+
+        prog = int(line.strip())
+        _progress(prog, "Importing")
 
 
 def save_system_state(target, measure=False, do_config=True, do_system=True, do_apks=True, do_homedirs=True):
@@ -296,6 +339,8 @@ def main(version):
     parser.add_argument("--restore", help="Restore instead of backup",
             action="store_true")
     parser.add_argument("--json", help="Output json progress", action="store_true")
+    parser.add_argument("--export", help="Export backup to tar")
+    parser.add_argument("--import", help="Import backup from tar", dest="import_backup")
 
     # Options to speed up backup, everything defaults to true to ensure you'll get a
     # usable complete backup if you don't read the instructions. Most of these steps
@@ -328,6 +373,10 @@ def main(version):
             restore_packages(args.target, args.apks, args.cross_branch)
         if args.homedir:
             restore_homedirs(args.target)
+    elif args.export:
+        export_backup(args.target, args.export)
+    elif args.import_backup:
+        import_backup(args.import_backup, args.target)
     else:
         save_system_state(args.target, args.measure, args.config, args.system,
                           args.apks, args.homedir)

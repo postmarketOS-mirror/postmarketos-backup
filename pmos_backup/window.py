@@ -270,6 +270,55 @@ class BackupWindow:
         self.dialog = ProgressDialog(self.window, "Making new backup")
         self.dialog.run()
 
+    def on_backup_row_activate(self, widget, row):
+        dialog = Gtk.MessageDialog(transient_for=self.window,
+                message_type=Gtk.MessageType.QUESTION, buttons=Gtk.ButtonsType.OK_CANCEL,
+                text="Do you want to export this backup to a file?")
+        
+        response = dialog.run()
+        if response != Gtk.ResponseType.OK:
+            dialog.destroy()
+            return
+        dialog.destroy()
+
+        dialog = Gtk.FileChooserDialog("Export Backup", self.window,
+                Gtk.FileChooserAction.SAVE)
+        dialog.add_buttons(
+                Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+                "_Export", Gtk.ResponseType.OK
+                )
+
+        file_filter = Gtk.FileFilter()
+        file_filter.set_name("postmarketOS Backup")
+        file_filter.add_pattern("*.backup.tar.gz")
+        dialog.add_filter(file_filter)
+
+        label = os.path.basename(row.path)
+        filename = label + ".backup.tar.gz"
+        suggested_file = os.path.join(os.path.expanduser('~'), filename)
+        dialog.set_file(Gio.File.new_for_path(suggested_file))
+
+        response = dialog.run()
+        if response != Gtk.ResponseType.OK:
+            dialog.destroy()
+            return
+        save_path = dialog.get_file()
+        dialog.destroy()
+
+        if save_path is None:
+            return
+
+        save_path = str(save_path.get_path())
+        if not save_path.endswith('.backup.tar.gz'):
+            save_path += '.backup.tar.gz'
+
+        args = ['--export', save_path]
+        thread = BackupThread(row.path, self.progress_update, args)
+        thread.start()
+        self.dialog = ProgressDialog(self.window, "Restoring backup")
+        self.dialog.run()
+
+
     def on_restore_row_activate(self, widget, row):
         dialog = RestoreDialog(self.window)
 
@@ -300,7 +349,40 @@ class BackupWindow:
         if row.wrong_branch:
             args.append('--cross-branch')
 
-        thread = BackupThread(target, self.progress_update, args)
+        thread = BackupThread(row.path, self.progress_update, args)
         thread.start()
         self.dialog = ProgressDialog(self.window, "Restoring backup")
+        self.dialog.run()
+
+    def on_import_button_clicked(self, widget):
+        dialog = Gtk.FileChooserDialog("Import Backup", self.window,
+                Gtk.FileChooserAction.SAVE)
+        dialog.add_buttons(
+                Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+                "_Import", Gtk.ResponseType.OK
+                )
+
+        file_filter = Gtk.FileFilter()
+        file_filter.set_name("postmarketOS Backup")
+        file_filter.add_pattern("*.backup.tar.gz")
+        dialog.add_filter(file_filter)
+
+        response = dialog.run()
+        if response != Gtk.ResponseType.OK:
+            dialog.destroy()
+            return
+        source = dialog.get_file()
+        dialog.destroy()
+
+        if source is None:
+            return
+
+        source = str(source.get_path())
+
+        args = ['--import', source]
+        label = os.path.basename(source).replace('.backup.tar.gz', '')
+        target = os.path.join('/var/backup/', label)
+        thread = BackupThread(target, self.progress_update, args)
+        thread.start()
+        self.dialog = ProgressDialog(self.window, "Importing backup")
         self.dialog.run()
