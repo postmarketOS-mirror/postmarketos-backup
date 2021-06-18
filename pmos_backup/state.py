@@ -35,8 +35,8 @@ def export_backup(source, target):
     for root, dirs, filenames in os.walk(source):
         files += len(filenames)
 
-    cmd = ['tar', '-czvf', target, source]
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True)
+    cmd = ['tar', '-czvf', target, '.']
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True, cwd=source)
 
     done = 0
     while True:
