@@ -305,18 +305,32 @@ def restore_packages(source, restore_sideloaded=True, cross_branch=False):
         shutil.copyfile(os.path.join(source, 'state/repositories'), '/etc/apk/repositories')
 
     worldfile = os.path.join(source, 'state/world')
+    pkgs = []
+
+    with open('/etc/apk/world') as handle:
+        # Read existing device-* packages
+        for line in handle.readlines():
+            if line.startswith('device-'):
+                pkgs.append(line.strip())
+
+    with open(worldfile) as handle:
+        for line in handle.readlines():
+            # Skip sideloaded packages if not requested
+            if '><' in line and not restore_sideloaded:
+                continue
+
+            # Don't copy over the device package in case
+            # it's a different device the backup is from
+            if line.startswith('device-'):
+                continue
+            pkgs.append(line.strip())
+
+    with open('/etc/apk/world', 'w') as handle:
+        handle.write('\n'.join(pkgs))
+    
     if restore_sideloaded:
-        shutil.copyfile(worldfile, '/etc/apk/world')
         shutil.copytree(os.path.join(source, 'state/cache'), '/etc/apk/cache',
                 dirs_exist_ok=True)
-    else:
-        pkgs = []
-        with open(worldfile) as handle:
-            for line in handle.readlines():
-                if '><' not in line:
-                    pkgs.append(line.strip())
-        with open('/etc/apk/world', 'w') as handle:
-            handle.write('\n'.join(pkgs))
 
     subprocess.run(['apk', 'fix'])
 
