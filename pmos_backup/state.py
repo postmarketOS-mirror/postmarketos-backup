@@ -18,6 +18,14 @@ def _progress(value, label):
         sys.stderr.write(label + "\n")
 
 
+def _error(message):
+    if _progress_json:
+        print(json.dumps({"error": message}))
+        sys.stdout.flush()
+    else:
+        sys.stderr.write(message + "\n")
+
+
 def parse_apk_cache():
     result = {}
     for path in glob.glob('/etc/apk/cache/*.apk'):
@@ -36,17 +44,27 @@ def export_backup(source, target):
         files += len(filenames)
 
     cmd = ['tar', '-czvf', target, '.']
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True, cwd=source)
+    env = os.environ.copy()
+    env['GZIP'] = '-1' # Fastest gzip compression
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+            universal_newlines=True, cwd=source, env=env)
 
     done = 0
     while True:
         line = p.stdout.readline()
         if not line:
-            return
+            break
         done += 1
 
         if done % 3 == 0:
             _progress((done/files)*100, "Exporting")
+
+    p.wait()
+    if p.returncode != 0:
+        _error("Exporting the tar archive failed")
+    
+    if not os.path.isfile(target):
+        return
 
     # Change owner/group of the resulting backup archive to the
     # owner of the directory it's in so users don't end up with
@@ -65,10 +83,15 @@ def import_backup(source, target):
     while True:
         line = p.stderr.readline()
         if not line:
-            return
+            break
 
         prog = int(line.strip())
         _progress(prog, "Importing")
+
+    p.wait()
+    if p.returncode != 0:
+        _error("Importing the tar archive failed")
+        exit(1)
 
 
 def save_system_state(target, measure=False, do_config=True, do_system=True, do_apks=True, do_homedirs=True):

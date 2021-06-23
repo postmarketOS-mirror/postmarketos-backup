@@ -37,11 +37,16 @@ class BackupThread(threading.Thread):
                 packet = json.loads(line)
                 if "progress"  in packet:
                     self._progress(packet["progress"], packet["label"])
+                elif "error" in packet:
+                    self._error(packet["error"])
             else:
                 print(">>> " + line)
 
     def _progress(self, value, label):
         GLib.idle_add(self.callback, (value, label))
+
+    def _error(self, message):
+        GLib.idle_add(self.callback, message)
 
 
 class ProgressDialog(Gtk.Dialog):
@@ -246,6 +251,17 @@ class BackupWindow:
         if data is None:
             self.dialog.destroy()
             self.fill_backup_list()
+            return
+        if isinstance(data, str):
+            err = Gtk.MessageDialog(
+                    transient_for=self.window,
+                    flags=0,
+                    message_type=Gtk.MessageType.ERROR,
+                    buttons=Gtk.ButtonsType.CANCEL,
+                    text=data
+                )
+            err.run()
+            err.destroy()
             return
         value, label = data
         self.dialog.label.set_text(label)
