@@ -245,19 +245,6 @@
                                                     <property name="halign">end</property>
                                                     <property name="spacing">8</property>
                                                     <child>
-                                                      <object class="GtkButton">
-                                                        <property name="label" translatable="yes">Calculate size</property>
-                                                        <property name="visible">True</property>
-                                                        <property name="can-focus">True</property>
-                                                        <property name="receives-default">True</property>
-                                                      </object>
-                                                      <packing>
-                                                        <property name="expand">False</property>
-                                                        <property name="fill">True</property>
-                                                        <property name="position">0</property>
-                                                      </packing>
-                                                    </child>
-                                                    <child>
                                                       <object class="GtkButton" id="backup_start">
                                                         <property name="label" translatable="yes">Backup</property>
                                                         <property name="visible">True</property>
