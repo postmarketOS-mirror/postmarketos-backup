@@ -383,7 +383,7 @@ def restore(filename, filter, skip_repositories=False):
             except Exception as e:
                 errors.append(e)
     if 'packages' in filter:
-        _progress(99, "Running package manager")
+        _progress(100, "Running package manager")
         subprocess.run(['apk', 'fix'])
 
 
