@@ -25,6 +25,18 @@
     <url type="homepage">https://gitlab.com/postmarketOS/postmarketos-backup</url>
     <content_rating type="oars-1.1"/>
     <releases>
+        <release version="1.0.0" date="2021-09-18">
+            <description>
+                <p>
+                    New major release because the backup file format has changed
+                </p>
+                <ul>
+                  <li>Backups are now directly written to targz</li>
+                  <li>No more import and export functionality</li>
+                  <li>More granular control over restore operations</li>
+                </ul>
+            </description>
+        </release>
         <release version="0.1.0" date="2021-05-21">
             <description>
                 <p>
