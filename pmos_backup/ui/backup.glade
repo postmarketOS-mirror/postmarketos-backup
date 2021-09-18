@@ -407,85 +407,12 @@
                                                       </packing>
                                                     </child>
                                                     <child>
-                                                      <object class="GtkBox">
+                                                      <object class="GtkBox" id="restore_box">
                                                         <property name="visible">True</property>
                                                         <property name="can-focus">False</property>
                                                         <property name="orientation">vertical</property>
-                                                        <property name="spacing">10</property>
                                                         <child>
-                                                          <object class="GtkCheckButton" id="restore_config">
-                                                            <property name="label" translatable="yes">Changed configuration</property>
-                                                            <property name="visible">True</property>
-                                                            <property name="can-focus">True</property>
-                                                            <property name="receives-default">False</property>
-                                                            <property name="active">True</property>
-                                                            <property name="draw-indicator">True</property>
-                                                          </object>
-                                                          <packing>
-                                                            <property name="expand">False</property>
-                                                            <property name="fill">True</property>
-                                                            <property name="position">0</property>
-                                                          </packing>
-                                                        </child>
-                                                        <child>
-                                                          <object class="GtkCheckButton" id="restore_system">
-                                                            <property name="label" translatable="yes">Changed system files</property>
-                                                            <property name="visible">True</property>
-                                                            <property name="can-focus">True</property>
-                                                            <property name="receives-default">False</property>
-                                                            <property name="active">True</property>
-                                                            <property name="draw-indicator">True</property>
-                                                          </object>
-                                                          <packing>
-                                                            <property name="expand">False</property>
-                                                            <property name="fill">True</property>
-                                                            <property name="position">1</property>
-                                                          </packing>
-                                                        </child>
-                                                        <child>
-                                                          <object class="GtkCheckButton" id="restore_packages">
-                                                            <property name="label" translatable="yes">Installed packages</property>
-                                                            <property name="visible">True</property>
-                                                            <property name="can-focus">True</property>
-                                                            <property name="receives-default">False</property>
-                                                            <property name="active">True</property>
-                                                            <property name="draw-indicator">True</property>
-                                                          </object>
-                                                          <packing>
-                                                            <property name="expand">False</property>
-                                                            <property name="fill">True</property>
-                                                            <property name="position">2</property>
-                                                          </packing>
-                                                        </child>
-                                                        <child>
-                                                          <object class="GtkCheckButton" id="restore_sideloaded">
-                                                            <property name="label" translatable="yes">Sideloaded packages</property>
-                                                            <property name="visible">True</property>
-                                                            <property name="can-focus">True</property>
-                                                            <property name="receives-default">False</property>
-                                                            <property name="active">True</property>
-                                                            <property name="draw-indicator">True</property>
-                                                          </object>
-                                                          <packing>
-                                                            <property name="expand">False</property>
-                                                            <property name="fill">True</property>
-                                                            <property name="position">3</property>
-                                                          </packing>
-                                                        </child>
-                                                        <child>
-                                                          <object class="GtkCheckButton" id="restore_homedirs">
-                                                            <property name="label" translatable="yes">Home directory</property>
-                                                            <property name="visible">True</property>
-                                                            <property name="can-focus">True</property>
-                                                            <property name="receives-default">False</property>
-                                                            <property name="active">True</property>
-                                                            <property name="draw-indicator">True</property>
-                                                          </object>
-                                                          <packing>
-                                                            <property name="expand">False</property>
-                                                            <property name="fill">True</property>
-                                                            <property name="position">4</property>
-                                                          </packing>
+                                                          <placeholder/>
                                                         </child>
                                                       </object>
                                                       <packing>
@@ -501,10 +428,11 @@
                                                         <property name="spacing">8</property>
                                                         <child>
                                                           <object class="GtkButton" id="restore_start">
-                                                            <property name="label" translatable="yes">Backup</property>
+                                                            <property name="label" translatable="yes">Restore</property>
                                                             <property name="visible">True</property>
                                                             <property name="can-focus">True</property>
                                                             <property name="receives-default">True</property>
+                                                            <signal name="clicked" handler="on_restore_start_clicked" swapped="no"/>
                                                             <style>
                                                             <class name="suggested-action"/>
                                                             </style>
@@ -538,6 +466,7 @@
                                                             <property name="preview-widget-active">False</property>
                                                             <property name="use-preview-label">False</property>
                                                             <property name="title" translatable="yes">Select target file</property>
+                                                            <signal name="file-set" handler="on_restore_file_set" swapped="no"/>
                                                           </object>
                                                           <packing>
                                                             <property name="expand">False</property>

@@ -7,6 +7,7 @@ import json
 import pathlib
 import shlex
 import tarfile
+import time
 
 _progress_json = False
 
@@ -102,8 +103,7 @@ def save_system_state(target, version, measure=False, do_config=True, do_system=
     errors = []
     tgz = None
     if not measure:
-        if not os.path.isdir(target):
-            os.makedirs(os.path.dirname(target))
+        os.makedirs(os.path.dirname(target), exist_ok=True)
 
         with open("/etc/apk/arch") as handle:
             arch = handle.read().strip()
@@ -113,11 +113,16 @@ def save_system_state(target, version, measure=False, do_config=True, do_system=
             "backup-version": str(version),
         }
 
-        tgz = tarfile.open(target, 'w:gz', pax_headers=headers)
-    statedir = os.path.join(target, 'state')
-    if not measure:
-        os.makedirs(statedir)
+        with open('/etc/os-release') as handle:
+            distro = {}
+            for line in handle:
+                k, v = line.rstrip().split("=")
+                distro[k] = v.strip('"')
+        headers['os-version'] = distro['VERSION_ID']
 
+        tgz = tarfile.open(target, 'w:gz', pax_headers=headers)
+
+    if not measure:
         # Copy over the apk state and some metadata about the installation
         _progress(10 * pscale, 'Copying metadata')
         tgz.add('/etc/apk/world')
@@ -191,7 +196,7 @@ def save_system_state(target, version, measure=False, do_config=True, do_system=
             "cache": cache_size,
         }
     else:
-        logfile = os.path.join(target, 'backup.log')
+        logfile = os.path.join(os.path.dirname(target), 'backup.log')
         with open(logfile, 'a') as handle:
             handle.write('*** Copy system state ***\n')
             for error in errors:
@@ -231,7 +236,7 @@ def save_homedirs(target, tgz):
             if done % 50 == 0:
                 _progress(int(50 + (done / count * 50.0)), "Copying homedirs")
 
-    logfile = os.path.join(target, 'backup.log')
+    logfile = os.path.join(os.path.dirname(target), 'backup.log')
     with open(logfile, 'a') as handle:
         handle.write('*** Copy homedir contents ***\n')
         for error in errors:
@@ -242,30 +247,6 @@ def removeprefix(data, prefix):
     if data.startswith(prefix):
         return data[len(prefix):]
     return data
-
-
-def restore_config(source):
-    _progress(10, "Restoring global config")
-    prefix = os.path.join(source, 'state/etc')
-    for path in glob.glob(os.path.join(prefix, '*')):
-        target_path = os.path.join('/etc', removeprefix(path, prefix))
-        os.makedirs(os.path.dirname(target_path))
-        shutil.copyfile(path, target_path, follow_symlinks=False)
-
-
-def restore_system(source):
-    _progress(20, "Restoring system files")
-    dirs = list(glob.glob(os.path.join(source, 'state/*/')))
-    dirs = list(map(os.path.dirname, dirs))
-    dirs = list(map(os.path.basename, dirs))
-    dirs = filter(lambda x: x not in ['etc', 'cache'], dirs)
-
-    for state_dir in dirs:
-        prefix = os.path.join(source, 'state', state_dir)
-        for path in glob.glob(os.path.join(prefix, '*')):
-            target_path = os.path.join('/', state_dir, removeprefix(path, prefix))
-            os.makedirs(os.path.dirname(target_path))
-            shutil.copyfile(path, target_path, follow_symlinks=False)
 
 
 def restore_packages(source, restore_sideloaded=True, cross_branch=False):
@@ -307,34 +288,107 @@ def restore_packages(source, restore_sideloaded=True, cross_branch=False):
     subprocess.run(['apk', 'fix'])
 
 
-def restore_homedirs(source):
+def classify(path):
+    if path == 'etc/os-release':
+        return None
+    elif path.startswith('etc/apk/cache'):
+        return 'sideloaded'
+    elif path.startswith('etc/apk'):
+        return 'packages'
+    elif path.startswith('etc/'):
+        if path.startswith('etc/NetworkManager') or path.startswith('etc/wireguard'):
+            return 'config.networks'
+        if path in ['etc/passwd', 'etc/group', 'etc/shadow']:
+            return 'config.accounts'
+        else:
+            return 'config.other'
+    elif path.startswith('home/') or path.startswith('root/'):
+        if path.startswith('root/'):
+            return 'homedir.root'
+        else:
+            part = path.split('/', maxsplit=2)
+            return 'homedir.' + part[1]
+    return 'system'
+
+
+def get_archive_info(filename):
+    contents = {}
+    size = {}
+    with tarfile.open(filename, 'r:gz', errorlevel=2) as tgz:
+        for fi in tgz:
+            cat = classify(fi.name)
+            if cat:
+                if cat not in contents:
+                    contents[cat] = []
+                    size[cat] = 0
+                contents[cat].append(fi.name)
+                size[cat] += fi.size
+    return size, contents
+
+
+def restore(filename, filter, skip_repositories=False):
     errors = []
-    _progress(50, "Copying homedirs")
+    size, contents = get_archive_info(filename)
+    total_bytes = 0
+    current_bytes = 0
+    last_bytes = 0
+    for key in size:
+        if key in filter:
+            total_bytes += size[key]
 
-    # Count the total files for progress calculations
-    count = 0
-    for root, dirs, files in os.walk(os.path.join(source, 'home')):
-        for fname in files:
-            count += 1
-
-    # Do the actual copy
-    done = 0
-    for root, dirs, files in os.walk(os.path.join(source, 'home'), topdown=True):
-        target_dir = removeprefix(root, source)
-        os.makedirs(target_dir)
-
-        for fname in files:
-            path = os.path.join(root, fname)
+    with tarfile.open(filename, 'r:gz', errorlevel=2) as tgz:
+        for fi in tgz:
             try:
-                shutil.copyfile(path, os.path.join(target_dir, fname), follow_symlinks=False)
+                # Never overwrite the distro release info
+                if fi.name == "etc/os-release":
+                    continue
+
+                cat = classify(fi.name)
+                if cat in filter:
+
+                    if cat in ['packages', 'sideloaded']:
+                        if fi.name == 'etc/apk/world':
+                            pkgs = []
+                            sideloaded = 'sideloaded' in filter
+                            with open('/etc/apk/world') as handle:
+                                for line in handle.readlines():
+                                    if line.startswith('device-'):
+                                        pkgs.append(line.strip())
+
+                            world = tgz.extractfile(fi).read()
+                            for line in world.splitlines():
+                                if '><' in line and not sideloaded:
+                                    continue
+                                if line.startswith('device-'):
+                                    continue
+                                pkgs.append(line.strip())
+
+                            with open('/etc/apk/world', 'w') as handle:
+                                handle.write('\n'.join(pkgs))
+                        elif fi.name == 'etc/apk/repositories' and skip_repositories:
+                            pass
+                        else:
+                            tgz.extract(fi, "/")
+                    else:
+                        tgz.extract(fi, "/")
+                    current_bytes += fi.size
+                    if current_bytes - last_bytes > 1024 * 1024:
+                        _progress(current_bytes / total_bytes * 100, "Restoring backup")
+                        last_bytes = current_bytes
+
             except Exception as e:
-                errors.append(str(e))
+                errors.append(e)
+    if 'packages' in filter:
+        _progress(99, "Running package manager")
+        subprocess.run(['apk', 'fix'])
 
-            done += 1
 
-            # Rate limit the progress updates to save resources
-            if done % 50 == 0:
-                _progress(int(50 + (done / count * 50.0)), "Copying homedirs")
+def sizeof_fmt(num, suffix='B'):
+    for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f%s%s" % (num, 'Yi', suffix)
 
 
 def main(version):
@@ -346,6 +400,8 @@ def main(version):
     parser.add_argument("--measure", help="Measure backup size instead of storing it",
                         action="store_true")
     parser.add_argument("--restore", help="Restore instead of backup",
+                        action="store_true")
+    parser.add_argument("--show", help="Show the contents of a backup file",
                         action="store_true")
     parser.add_argument("--json", help="Output json progress", action="store_true")
 
@@ -361,36 +417,50 @@ def main(version):
                         action="store_false", dest="homedir")
     parser.add_argument("--no-apks", help="Don't backup sideloaded apks",
                         action="store_false", dest="apks")
-    parser.add_argument("--no-pkgs", help="Don't restore packages (unused in backup)",
-                        action="store_false", dest="pkgs")
     parser.add_argument("--cross-branch", help="Don't restore the repositories file",
                         action="store_true", dest="cross_branch")
+    parser.add_argument("--filter", help="Custom restore filter",
+                        action="append")
 
     args = parser.parse_args()
 
     if args.json:
         _progress_json = True
-
-    if args.restore:
-        if args.config:
-            restore_config(args.target)
-        if args.system:
-            restore_system(args.target)
-        if args.pkgs:
-            restore_packages(args.target, args.apks, args.cross_branch)
-        if args.homedir:
-            restore_homedirs(args.target)
-    elif args.export:
-        export_backup(args.target, args.export)
-    elif args.import_backup:
-        import_backup(args.import_backup, args.target)
+    if args.show:
+        size, contents = get_archive_info(args.target)
+        tree = {}
+        keys = (size.keys())
+        for key in keys:
+            if '.' in key:
+                key, _ = key.split('.', maxsplit=1)
+            if key not in tree:
+                tree[key] = []
+        for key in sorted(keys):
+            if '.' not in key:
+                continue
+            skey = key
+            key, subkey = key.split('.', maxsplit=1)
+            tree[key].append(subkey)
+            if key not in contents:
+                contents[key] = []
+                size[key] = 0
+            contents[key].extend(contents[skey])
+            size[key] += size[skey]
+        for key in tree:
+            print(f'{key} | {len(contents[key])} files | {sizeof_fmt(size[key])}')
+            for subkey in tree[key]:
+                skey = f'{key}.{subkey}'
+                print(f'    {subkey} | {len(contents[skey])} files | {sizeof_fmt(size[skey])}')
+    elif args.restore:
+        restore(args.target, args.filter, args.cross_branch)
     else:
-        tgz = save_system_state(args.target, args.measure, args.config, args.system,
+        tgz = save_system_state(args.target, version, args.measure, args.config, args.system,
                                 args.apks, args.homedir)
         if args.homedir:
             save_homedirs(args.target, tgz)
 
-        tgz.close()
+        if not isinstance(tgz, dict):
+            tgz.close()
 
 
 if __name__ == '__main__':

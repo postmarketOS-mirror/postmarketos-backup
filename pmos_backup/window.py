@@ -1,13 +1,13 @@
 import os
+import platform
 import threading
-import datetime
 import subprocess
 import json
-import glob
-
-import pmos_backup.state as state
 
 import gi
+
+from pmos_backup import backupinfo
+from pmos_backup.state import get_archive_info
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GLib, GObject, Gio, Gdk, GLib
@@ -155,11 +155,9 @@ class BackupWindow:
 
         self.restore_start = builder.get_object("restore_start")
         self.restore_filepicker = builder.get_object("restore_filepicker")
-        self.restore_config = builder.get_object("restore_config")
-        self.restore_system = builder.get_object("restore_system")
-        self.restore_packages = builder.get_object("restore_packages")
-        self.restore_sideloaded = builder.get_object("restore_sideloaded")
-        self.restore_homedirs = builder.get_object("restore_homedirs")
+        self.restore_warning = builder.get_object("restore_warning")
+        self.restore_checks = {}
+        self.restore_box = builder.get_object("restore_box")
 
         self.apply_css(self.window, self.provider)
         self.window.show()
@@ -233,4 +231,121 @@ class BackupWindow:
         thread = BackupThread(target, self.progress_update, args)
         thread.start()
         self.dialog = ProgressDialog(self.window, "Making new backup")
+        self.dialog.run()
+
+    def on_restore_file_set(self, widget):
+        filename = widget.get_filename()
+        headers = backupinfo.get_info(filename)
+
+        warnings = []
+        allow_packages = True
+        allow_system = True
+        self.restore_warning.hide()
+
+        arch = platform.machine()
+        if os.path.isfile('/etc/apk/arch'):
+            with open('/etc/apk/arch') as handle:
+                arch = handle.read().strip()
+
+        if 'arch' in headers and headers['arch'] != arch:
+            warnings.append(f'This backup is for another CPU ({headers["arch"]})')
+            allow_packages = False
+        else:
+            allow_packages = True
+
+        if 'os-version' in headers:
+            with open('/etc/os-release') as handle:
+                distro = {}
+                for line in handle:
+                    k, v = line.rstrip().split("=")
+                    distro[k] = v.strip('"')
+
+            if headers['os-version'] != distro['VERSION_ID']:
+                warnings.append(f'This backup is for another OS version ({headers["os-version"]})')
+                self.allow_system = False
+            else:
+                self.allow_system = True
+
+        if len(warnings):
+            text = '\n'.join(warnings)
+            self.restore_warning.set_text(text)
+            self.restore_warning.show()
+
+        size, contents = get_archive_info(filename)
+        names = {
+            "packages": "Installed packages",
+            "config": "System configuration",
+            "system": "Changed system files",
+            "homedir": "Home directories",
+        }
+        tree = {}
+        for key in size.keys():
+            if '.' in key:
+                key, _ = key.split('.', maxsplit=1)
+            if key not in tree:
+                tree[key] = []
+        for key in sorted(size.keys()):
+            if '.' not in key:
+                continue
+            key, subkey = key.split('.', maxsplit=1)
+            tree[key].append(subkey)
+
+        for key in tree:
+            name = key
+
+            label = f'[{name}]'
+            if name in names:
+                label = names[name]
+            if len(tree[key]) == 0:
+                mark = Gtk.CheckButton(label)
+                mark.archive_key = key
+                self.restore_checks[key] = mark
+                self.restore_box.pack_start(mark, False, False, 0)
+                detail = Gtk.Label("{} files, {} bytes".format(len(contents[key]), size[key]))
+                detail.set_margin_start(25)
+                detail.set_margin_bottom(10)
+                detail.get_style_context().add_class('dim-label')
+                detail.set_xalign(0)
+                self.restore_box.pack_start(detail, False, False, 0)
+            else:
+                heading = Gtk.Label(label)
+                heading.set_xalign(0)
+                heading.set_margin_start(25)
+                self.restore_box.pack_start(heading, False, False, 0)
+            for subkey in tree[key]:
+                label = subkey.title()
+                mark = Gtk.CheckButton(label)
+                mark.set_margin_start(16)
+                skey = f'{key}.{subkey.lower()}'
+                mark.archive_key = skey
+                self.restore_checks[skey] = mark
+                self.restore_box.pack_start(mark, False, False, 0)
+
+                detail = Gtk.Label("{} files, {} bytes".format(len(contents[skey]), size[skey]))
+                detail.set_margin_start(25 + 16)
+                detail.set_margin_bottom(10)
+                detail.get_style_context().add_class('dim-label')
+                detail.set_xalign(0)
+                self.restore_box.pack_start(detail, False, False, 0)
+            self.restore_box.pack_start(Gtk.Separator(), False, False, 0)
+
+        self.restore_box.show_all()
+
+    def on_restore_start_clicked(self, widget):
+        filename = self.restore_filepicker.get_filename()
+        args = ['--restore']
+        if not self.restore_config.get_active():
+            args.append('--no-config')
+        if not self.restore_system.get_active():
+            args.append('--no-system')
+        if not self.restore_packages.get_active():
+            args.append('--no-packages')
+        if not self.restore_sideloaded.get_active():
+            args.append('--no-apks')
+        if not self.restore_homedirs.get_active():
+            args.append('--no-homedirs')
+
+        thread = BackupThread(filename, self.progress_update, args)
+        thread.start()
+        self.dialog = ProgressDialog(self.window, "Restoring backup")
         self.dialog.run()
