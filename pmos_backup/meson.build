@@ -38,6 +38,7 @@ sources = [
     '__main__.py',
     'window.py',
     'state.py',
+    'backupinfo.py',
 ]
 
 install_data(sources, install_dir: moduledir)
