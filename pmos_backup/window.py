@@ -177,6 +177,13 @@ class BackupWindow:
     def on_main_window_destroy(self, widget):
         Gtk.main_quit()
 
+    def sizeof_fmt(self, num, suffix='B'):
+        for unit in ['', 'Ki', 'Mi', 'Gi', 'Ti', 'Pi', 'Ei', 'Zi']:
+            if abs(num) < 1024.0:
+                return "%3.1f%s%s" % (num, unit, suffix)
+            num /= 1024.0
+        return "%.1f%s%s" % (num, 'Yi', suffix)
+
     def progress_update(self, data):
         if data is None:
             self.dialog.destroy()
@@ -315,7 +322,7 @@ class BackupWindow:
                     mark.set_sensitive(True)
                 self.restore_checks[key] = mark
                 self.restore_box.pack_start(mark, False, False, 0)
-                detail = Gtk.Label("{} files, {} bytes".format(len(contents[key]), size[key]))
+                detail = Gtk.Label("{} files, {} bytes".format(len(contents[key]), self.sizeof_fmt(size[key])))
                 detail.set_margin_start(25)
                 detail.set_margin_bottom(10)
                 detail.get_style_context().add_class('dim-label')
@@ -325,18 +332,19 @@ class BackupWindow:
                 heading = Gtk.Label(label)
                 heading.set_xalign(0)
                 heading.set_margin_start(25)
+                heading.set_margin_bottom(8)
                 self.restore_box.pack_start(heading, False, False, 0)
             for subkey in tree[key]:
                 label = subkey.title()
                 mark = Gtk.CheckButton(label)
-                mark.set_margin_start(16)
+                mark.set_margin_start(24)
                 skey = f'{key}.{subkey.lower()}'
                 mark.archive_key = skey
                 self.restore_checks[skey] = mark
                 self.restore_box.pack_start(mark, False, False, 0)
 
-                detail = Gtk.Label("{} files, {} bytes".format(len(contents[skey]), size[skey]))
-                detail.set_margin_start(25 + 16)
+                detail = Gtk.Label("{} files, {} bytes".format(len(contents[skey]), self.sizeof_fmt(size[skey])))
+                detail.set_margin_start(25 + 24)
                 detail.set_margin_bottom(10)
                 detail.get_style_context().add_class('dim-label')
                 detail.set_xalign(0)
@@ -350,8 +358,9 @@ class BackupWindow:
         filename = self.restore_filepicker.get_filename()
         args = ['--restore']
         for mark in self.restore_checks:
-            if mark.get_active():
-                args.extend(['--filter', mark.archive_key])
+            checkmark = self.restore_checks[mark]
+            if checkmark.get_active():
+                args.extend(['--filter', checkmark.archive_key])
         thread = BackupThread(filename, self.progress_update, args)
         thread.start()
         self.dialog = ProgressDialog(self.window, "Restoring backup")
