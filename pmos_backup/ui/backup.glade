@@ -3,6 +3,11 @@
 <interface>
   <requires lib="gtk+" version="3.24"/>
   <requires lib="libhandy" version="1.0"/>
+  <object class="GtkFileFilter" id="filter_targz">
+    <patterns>
+      <pattern>*.backup.tar.gz</pattern>
+    </patterns>
+  </object>
   <object class="HdyWindow" id="main_window">
     <property name="height-request">300</property>
     <property name="can-focus">False</property>
@@ -70,6 +75,8 @@
                           <object class="GtkBox">
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
+                            <property name="margin-top">16</property>
+                            <property name="margin-bottom">16</property>
                             <property name="orientation">vertical</property>
                             <child>
                               <object class="HdyClamp">
@@ -79,210 +86,17 @@
                                   <object class="GtkBox">
                                     <property name="visible">True</property>
                                     <property name="can-focus">False</property>
-                                    <property name="margin-start">8</property>
-                                    <property name="margin-end">8</property>
-                                    <property name="margin-top">16</property>
-                                    <property name="margin-bottom">16</property>
                                     <property name="orientation">vertical</property>
-                                    <property name="spacing">16</property>
+                                    <property name="spacing">5</property>
                                     <child>
-                                      <object class="GtkBox">
+                                      <object class="GtkLabel">
                                         <property name="visible">True</property>
                                         <property name="can-focus">False</property>
-                                        <property name="orientation">vertical</property>
-                                        <property name="spacing">5</property>
-                                        <child>
-                                          <object class="GtkLabel">
-                                            <property name="visible">True</property>
-                                            <property name="can-focus">False</property>
-                                            <property name="halign">start</property>
-                                            <property name="label" translatable="yes">Create new backup</property>
-                                            <style>
-                                              <class name="heading"/>
-                                            </style>
-                                          </object>
-                                          <packing>
-                                            <property name="expand">False</property>
-                                            <property name="fill">True</property>
-                                            <property name="position">0</property>
-                                          </packing>
-                                        </child>
-                                        <child>
-                                          <object class="GtkFrame">
-                                            <property name="visible">True</property>
-                                            <property name="can-focus">False</property>
-                                            <property name="label-xalign">0</property>
-                                            <property name="shadow-type">in</property>
-                                            <child>
-                                              <!-- n-columns=2 n-rows=3 -->
-                                              <object class="GtkGrid">
-                                                <property name="visible">True</property>
-                                                <property name="can-focus">False</property>
-                                                <property name="margin-start">8</property>
-                                                <property name="margin-end">8</property>
-                                                <property name="margin-top">8</property>
-                                                <property name="margin-bottom">8</property>
-                                                <property name="row-spacing">8</property>
-                                                <property name="column-spacing">8</property>
-                                                <child>
-                                                  <object class="GtkLabel">
-                                                    <property name="visible">True</property>
-                                                    <property name="can-focus">False</property>
-                                                    <property name="halign">end</property>
-                                                    <property name="label" translatable="yes">Label</property>
-                                                    <style>
-                                                      <class name="dim-label"/>
-                                                    </style>
-                                                  </object>
-                                                  <packing>
-                                                    <property name="left-attach">0</property>
-                                                    <property name="top-attach">0</property>
-                                                  </packing>
-                                                </child>
-                                                <child>
-                                                  <object class="GtkEntry" id="new_backup_label">
-                                                    <property name="visible">True</property>
-                                                    <property name="can-focus">True</property>
-                                                    <property name="hexpand">True</property>
-                                                  </object>
-                                                  <packing>
-                                                    <property name="left-attach">1</property>
-                                                    <property name="top-attach">0</property>
-                                                  </packing>
-                                                </child>
-                                                <child>
-                                                  <object class="GtkLabel">
-                                                    <property name="visible">True</property>
-                                                    <property name="can-focus">False</property>
-                                                    <property name="halign">end</property>
-                                                    <property name="valign">start</property>
-                                                    <property name="label" translatable="yes">Include</property>
-                                                    <style>
-                                                      <class name="dim-label"/>
-                                                    </style>
-                                                  </object>
-                                                  <packing>
-                                                    <property name="left-attach">0</property>
-                                                    <property name="top-attach">1</property>
-                                                  </packing>
-                                                </child>
-                                                <child>
-                                                  <object class="GtkBox">
-                                                    <property name="visible">True</property>
-                                                    <property name="can-focus">False</property>
-                                                    <property name="orientation">vertical</property>
-                                                    <property name="spacing">10</property>
-                                                    <child>
-                                                      <object class="GtkCheckButton" id="new_backup_config">
-                                                        <property name="label" translatable="yes">Changed configuration</property>
-                                                        <property name="visible">True</property>
-                                                        <property name="can-focus">True</property>
-                                                        <property name="receives-default">False</property>
-                                                        <property name="active">True</property>
-                                                        <property name="draw-indicator">True</property>
-                                                      </object>
-                                                      <packing>
-                                                        <property name="expand">False</property>
-                                                        <property name="fill">True</property>
-                                                        <property name="position">0</property>
-                                                      </packing>
-                                                    </child>
-                                                    <child>
-                                                      <object class="GtkCheckButton" id="new_backup_system">
-                                                        <property name="label" translatable="yes">Changed system files</property>
-                                                        <property name="visible">True</property>
-                                                        <property name="can-focus">True</property>
-                                                        <property name="receives-default">False</property>
-                                                        <property name="active">True</property>
-                                                        <property name="draw-indicator">True</property>
-                                                      </object>
-                                                      <packing>
-                                                        <property name="expand">False</property>
-                                                        <property name="fill">True</property>
-                                                        <property name="position">1</property>
-                                                      </packing>
-                                                    </child>
-                                                    <child>
-                                                      <object class="GtkCheckButton" id="new_backup_apks">
-                                                        <property name="label" translatable="yes">Sideloaded packages</property>
-                                                        <property name="visible">True</property>
-                                                        <property name="can-focus">True</property>
-                                                        <property name="receives-default">False</property>
-                                                        <property name="active">True</property>
-                                                        <property name="draw-indicator">True</property>
-                                                      </object>
-                                                      <packing>
-                                                        <property name="expand">False</property>
-                                                        <property name="fill">True</property>
-                                                        <property name="position">2</property>
-                                                      </packing>
-                                                    </child>
-                                                    <child>
-                                                      <object class="GtkCheckButton" id="new_backup_homedirs">
-                                                        <property name="label" translatable="yes">Home directory</property>
-                                                        <property name="visible">True</property>
-                                                        <property name="can-focus">True</property>
-                                                        <property name="receives-default">False</property>
-                                                        <property name="active">True</property>
-                                                        <property name="draw-indicator">True</property>
-                                                      </object>
-                                                      <packing>
-                                                        <property name="expand">False</property>
-                                                        <property name="fill">True</property>
-                                                        <property name="position">3</property>
-                                                      </packing>
-                                                    </child>
-                                                  </object>
-                                                  <packing>
-                                                    <property name="left-attach">1</property>
-                                                    <property name="top-attach">1</property>
-                                                  </packing>
-                                                </child>
-                                                <child>
-                                                  <object class="GtkBox">
-                                                    <property name="visible">True</property>
-                                                    <property name="can-focus">False</property>
-                                                    <property name="halign">end</property>
-                                                    <property name="spacing">8</property>
-                                                    <child>
-                                                      <object class="GtkButton" id="backup_start">
-                                                        <property name="label" translatable="yes">Backup</property>
-                                                        <property name="visible">True</property>
-                                                        <property name="can-focus">True</property>
-                                                        <property name="receives-default">True</property>
-                                                        <signal name="clicked" handler="on_backup_start_clicked" swapped="no"/>
-                                                        <style>
-                                                          <class name="suggested-action"/>
-                                                        </style>
-                                                      </object>
-                                                      <packing>
-                                                        <property name="expand">False</property>
-                                                        <property name="fill">True</property>
-                                                        <property name="position">1</property>
-                                                      </packing>
-                                                    </child>
-                                                  </object>
-                                                  <packing>
-                                                    <property name="left-attach">0</property>
-                                                    <property name="top-attach">2</property>
-                                                    <property name="width">2</property>
-                                                  </packing>
-                                                </child>
-                                              </object>
-                                            </child>
-                                            <child type="label_item">
-                                              <placeholder/>
-                                            </child>
-                                            <style>
-                                              <class name="view"/>
-                                            </style>
-                                          </object>
-                                          <packing>
-                                            <property name="expand">False</property>
-                                            <property name="fill">True</property>
-                                            <property name="position">1</property>
-                                          </packing>
-                                        </child>
+                                        <property name="halign">start</property>
+                                        <property name="label" translatable="yes">Create new backup</property>
+                                        <style>
+                                          <class name="heading"/>
+                                        </style>
                                       </object>
                                       <packing>
                                         <property name="expand">False</property>
@@ -291,76 +105,164 @@
                                       </packing>
                                     </child>
                                     <child>
-                                      <object class="GtkBox">
+                                      <object class="GtkFrame">
                                         <property name="visible">True</property>
                                         <property name="can-focus">False</property>
-                                        <property name="orientation">vertical</property>
-                                        <property name="spacing">5</property>
+                                        <property name="label-xalign">0</property>
+                                        <property name="shadow-type">in</property>
                                         <child>
-                                          <object class="GtkLabel">
+                                          <!-- n-columns=2 n-rows=3 -->
+                                          <object class="GtkGrid">
                                             <property name="visible">True</property>
                                             <property name="can-focus">False</property>
-                                            <property name="halign">start</property>
-                                            <property name="label" translatable="yes">Backups</property>
-                                            <style>
-                                              <class name="heading"/>
-                                            </style>
-                                          </object>
-                                          <packing>
-                                            <property name="expand">False</property>
-                                            <property name="fill">True</property>
-                                            <property name="position">0</property>
-                                          </packing>
-                                        </child>
-                                        <child>
-                                          <object class="GtkFrame">
-                                            <property name="visible">True</property>
-                                            <property name="can-focus">False</property>
-                                            <property name="label-xalign">0</property>
-                                            <property name="shadow-type">in</property>
+                                            <property name="margin-start">8</property>
+                                            <property name="margin-end">8</property>
+                                            <property name="margin-top">8</property>
+                                            <property name="margin-bottom">8</property>
+                                            <property name="row-spacing">8</property>
+                                            <property name="column-spacing">8</property>
                                             <child>
-                                              <object class="GtkListBox" id="backups">
+                                              <object class="GtkLabel">
                                                 <property name="visible">True</property>
                                                 <property name="can-focus">False</property>
-    						<signal name="row-activated" handler="on_backup_row_activate" swapped="no"/>
-                                                <child type="placeholder">
-                                                  <object class="GtkLabel">
+                                                <property name="halign">end</property>
+                                                <property name="valign">start</property>
+                                                <property name="label" translatable="yes">Include</property>
+                                                <style>
+                                                  <class name="dim-label"/>
+                                                </style>
+                                              </object>
+                                              <packing>
+                                                <property name="left-attach">0</property>
+                                                <property name="top-attach">1</property>
+                                              </packing>
+                                            </child>
+                                            <child>
+                                              <object class="GtkBox">
+                                                <property name="visible">True</property>
+                                                <property name="can-focus">False</property>
+                                                <property name="orientation">vertical</property>
+                                                <property name="spacing">10</property>
+                                                <child>
+                                                  <object class="GtkCheckButton" id="new_backup_config">
+                                                    <property name="label" translatable="yes">Changed configuration</property>
                                                     <property name="visible">True</property>
-                                                    <property name="can-focus">False</property>
-                                                    <property name="margin-start">16</property>
-                                                    <property name="margin-end">16</property>
-                                                    <property name="margin-top">16</property>
-                                                    <property name="margin-bottom">16</property>
-                                                    <property name="label" translatable="yes">No backups have been made yet.</property>
-                                                    <style>
-                                                      <class name="dim-label"/>
-                                                    </style>
+                                                    <property name="can-focus">True</property>
+                                                    <property name="receives-default">False</property>
+                                                    <property name="halign">start</property>
+                                                    <property name="active">True</property>
+                                                    <property name="draw-indicator">True</property>
                                                   </object>
+                                                  <packing>
+                                                    <property name="expand">False</property>
+                                                    <property name="fill">True</property>
+                                                    <property name="position">0</property>
+                                                  </packing>
+                                                </child>
+                                                <child>
+                                                  <object class="GtkCheckButton" id="new_backup_system">
+                                                    <property name="label" translatable="yes">Changed system files</property>
+                                                    <property name="visible">True</property>
+                                                    <property name="can-focus">True</property>
+                                                    <property name="receives-default">False</property>
+                                                    <property name="halign">start</property>
+                                                    <property name="active">True</property>
+                                                    <property name="draw-indicator">True</property>
+                                                  </object>
+                                                  <packing>
+                                                    <property name="expand">False</property>
+                                                    <property name="fill">True</property>
+                                                    <property name="position">1</property>
+                                                  </packing>
+                                                </child>
+                                                <child>
+                                                  <object class="GtkCheckButton" id="new_backup_apks">
+                                                    <property name="label" translatable="yes">Sideloaded packages</property>
+                                                    <property name="visible">True</property>
+                                                    <property name="can-focus">True</property>
+                                                    <property name="receives-default">False</property>
+                                                    <property name="halign">start</property>
+                                                    <property name="active">True</property>
+                                                    <property name="draw-indicator">True</property>
+                                                  </object>
+                                                  <packing>
+                                                    <property name="expand">False</property>
+                                                    <property name="fill">True</property>
+                                                    <property name="position">2</property>
+                                                  </packing>
+                                                </child>
+                                                <child>
+                                                  <object class="GtkCheckButton" id="new_backup_homedirs">
+                                                    <property name="label" translatable="yes">Home directory</property>
+                                                    <property name="visible">True</property>
+                                                    <property name="can-focus">True</property>
+                                                    <property name="receives-default">False</property>
+                                                    <property name="halign">start</property>
+                                                    <property name="active">True</property>
+                                                    <property name="draw-indicator">True</property>
+                                                  </object>
+                                                  <packing>
+                                                    <property name="expand">False</property>
+                                                    <property name="fill">True</property>
+                                                    <property name="position">3</property>
+                                                  </packing>
                                                 </child>
                                               </object>
+                                              <packing>
+                                                <property name="left-attach">1</property>
+                                                <property name="top-attach">1</property>
+                                              </packing>
                                             </child>
-                                            <child type="label_item">
+                                            <child>
+                                              <object class="GtkBox">
+                                                <property name="visible">True</property>
+                                                <property name="can-focus">False</property>
+                                                <property name="halign">end</property>
+                                                <property name="spacing">8</property>
+                                                <child>
+                                                  <object class="GtkButton" id="backup_start">
+                                                    <property name="label" translatable="yes">Backup</property>
+                                                    <property name="visible">True</property>
+                                                    <property name="can-focus">True</property>
+                                                    <property name="receives-default">True</property>
+                                                    <signal name="clicked" handler="on_backup_start_clicked" swapped="no"/>
+                                                    <style>
+                                                      <class name="suggested-action"/>
+                                                    </style>
+                                                  </object>
+                                                  <packing>
+                                                    <property name="expand">False</property>
+                                                    <property name="fill">True</property>
+                                                    <property name="position">1</property>
+                                                  </packing>
+                                                </child>
+                                              </object>
+                                              <packing>
+                                                <property name="left-attach">0</property>
+                                                <property name="top-attach">2</property>
+                                                <property name="width">2</property>
+                                              </packing>
+                                            </child>
+                                            <child>
                                               <placeholder/>
                                             </child>
-                                            <style>
-                                              <class name="view"/>
-                                            </style>
+                                            <child>
+                                              <placeholder/>
+                                            </child>
                                           </object>
-                                          <packing>
-                                            <property name="expand">False</property>
-                                            <property name="fill">True</property>
-                                            <property name="position">1</property>
-                                          </packing>
                                         </child>
+                                        <child type="label_item">
+                                          <placeholder/>
+                                        </child>
+                                        <style>
+                                          <class name="view"/>
+                                        </style>
                                       </object>
                                       <packing>
                                         <property name="expand">False</property>
                                         <property name="fill">True</property>
                                         <property name="position">1</property>
                                       </packing>
-                                    </child>
-                                    <child>
-                                      <placeholder/>
                                     </child>
                                   </object>
                                 </child>
@@ -421,50 +323,257 @@
                                     <property name="margin-bottom">16</property>
                                     <property name="orientation">vertical</property>
                                     <child>
-                                      <placeholder/>
-                                    </child>
-                                    <child>
                                       <object class="GtkBox">
                                         <property name="visible">True</property>
                                         <property name="can-focus">False</property>
+                                        <property name="margin-left">8</property>
+                                        <property name="margin-right">8</property>
+                                        <property name="margin-start">8</property>
+                                        <property name="margin-end">8</property>
+                                        <property name="margin-top">16</property>
+                                        <property name="margin-bottom">16</property>
                                         <property name="orientation">vertical</property>
-                                        <property name="spacing">5</property>
+                                        <property name="spacing">16</property>
                                         <child>
                                           <object class="GtkBox">
                                             <property name="visible">True</property>
                                             <property name="can-focus">False</property>
+                                            <property name="orientation">vertical</property>
+                                            <property name="spacing">5</property>
                                             <child>
                                               <object class="GtkLabel">
                                                 <property name="visible">True</property>
                                                 <property name="can-focus">False</property>
                                                 <property name="halign">start</property>
-                                                <property name="label" translatable="yes">Stored backups</property>
-                                                <property name="yalign">1</property>
+                                                <property name="label" translatable="yes">Restore backup</property>
                                                 <style>
                                                   <class name="heading"/>
                                                 </style>
                                               </object>
                                               <packing>
-                                                <property name="expand">True</property>
+                                                <property name="expand">False</property>
                                                 <property name="fill">True</property>
                                                 <property name="position">0</property>
                                               </packing>
                                             </child>
                                             <child>
-                                              <object class="GtkButton" id="import_button">
-                                                <property name="label" translatable="yes">Import</property>
+                                              <object class="GtkFrame">
                                                 <property name="visible">True</property>
-                                                <property name="can-focus">True</property>
-                                                <property name="receives-default">True</property>
-    						<signal name="clicked" handler="on_import_button_clicked" swapped="no"/>
+                                                <property name="can-focus">False</property>
+                                                <property name="label-xalign">0</property>
+                                                <property name="shadow-type">in</property>
+                                                <child>
+                                                  <!-- n-columns=2 n-rows=3 -->
+                                                  <object class="GtkGrid">
+                                                    <property name="visible">True</property>
+                                                    <property name="can-focus">False</property>
+                                                    <property name="margin-left">8</property>
+                                                    <property name="margin-right">8</property>
+                                                    <property name="margin-start">8</property>
+                                                    <property name="margin-end">8</property>
+                                                    <property name="margin-top">8</property>
+                                                    <property name="margin-bottom">8</property>
+                                                    <property name="row-spacing">8</property>
+                                                    <property name="column-spacing">8</property>
+                                                    <child>
+                                                      <object class="GtkLabel">
+                                                        <property name="visible">True</property>
+                                                        <property name="can-focus">False</property>
+                                                        <property name="halign">end</property>
+                                                        <property name="label" translatable="yes">Backup file</property>
+                                                        <style>
+                                                          <class name="dim-label"/>
+                                                        </style>
+                                                      </object>
+                                                      <packing>
+                                                        <property name="left-attach">0</property>
+                                                        <property name="top-attach">0</property>
+                                                      </packing>
+                                                    </child>
+                                                    <child>
+                                                      <object class="GtkLabel">
+                                                        <property name="visible">True</property>
+                                                        <property name="can-focus">False</property>
+                                                        <property name="halign">end</property>
+                                                        <property name="valign">start</property>
+                                                        <property name="label" translatable="yes">Restore</property>
+                                                        <style>
+                                                          <class name="dim-label"/>
+                                                        </style>
+                                                      </object>
+                                                      <packing>
+                                                        <property name="left-attach">0</property>
+                                                        <property name="top-attach">1</property>
+                                                      </packing>
+                                                    </child>
+                                                    <child>
+                                                      <object class="GtkBox">
+                                                        <property name="visible">True</property>
+                                                        <property name="can-focus">False</property>
+                                                        <property name="orientation">vertical</property>
+                                                        <property name="spacing">10</property>
+                                                        <child>
+                                                          <object class="GtkCheckButton" id="restore_config">
+                                                            <property name="label" translatable="yes">Changed configuration</property>
+                                                            <property name="visible">True</property>
+                                                            <property name="can-focus">True</property>
+                                                            <property name="receives-default">False</property>
+                                                            <property name="active">True</property>
+                                                            <property name="draw-indicator">True</property>
+                                                          </object>
+                                                          <packing>
+                                                            <property name="expand">False</property>
+                                                            <property name="fill">True</property>
+                                                            <property name="position">0</property>
+                                                          </packing>
+                                                        </child>
+                                                        <child>
+                                                          <object class="GtkCheckButton" id="restore_system">
+                                                            <property name="label" translatable="yes">Changed system files</property>
+                                                            <property name="visible">True</property>
+                                                            <property name="can-focus">True</property>
+                                                            <property name="receives-default">False</property>
+                                                            <property name="active">True</property>
+                                                            <property name="draw-indicator">True</property>
+                                                          </object>
+                                                          <packing>
+                                                            <property name="expand">False</property>
+                                                            <property name="fill">True</property>
+                                                            <property name="position">1</property>
+                                                          </packing>
+                                                        </child>
+                                                        <child>
+                                                          <object class="GtkCheckButton" id="restore_packages">
+                                                            <property name="label" translatable="yes">Installed packages</property>
+                                                            <property name="visible">True</property>
+                                                            <property name="can-focus">True</property>
+                                                            <property name="receives-default">False</property>
+                                                            <property name="active">True</property>
+                                                            <property name="draw-indicator">True</property>
+                                                          </object>
+                                                          <packing>
+                                                            <property name="expand">False</property>
+                                                            <property name="fill">True</property>
+                                                            <property name="position">2</property>
+                                                          </packing>
+                                                        </child>
+                                                        <child>
+                                                          <object class="GtkCheckButton" id="restore_sideloaded">
+                                                            <property name="label" translatable="yes">Sideloaded packages</property>
+                                                            <property name="visible">True</property>
+                                                            <property name="can-focus">True</property>
+                                                            <property name="receives-default">False</property>
+                                                            <property name="active">True</property>
+                                                            <property name="draw-indicator">True</property>
+                                                          </object>
+                                                          <packing>
+                                                            <property name="expand">False</property>
+                                                            <property name="fill">True</property>
+                                                            <property name="position">3</property>
+                                                          </packing>
+                                                        </child>
+                                                        <child>
+                                                          <object class="GtkCheckButton" id="restore_homedirs">
+                                                            <property name="label" translatable="yes">Home directory</property>
+                                                            <property name="visible">True</property>
+                                                            <property name="can-focus">True</property>
+                                                            <property name="receives-default">False</property>
+                                                            <property name="active">True</property>
+                                                            <property name="draw-indicator">True</property>
+                                                          </object>
+                                                          <packing>
+                                                            <property name="expand">False</property>
+                                                            <property name="fill">True</property>
+                                                            <property name="position">4</property>
+                                                          </packing>
+                                                        </child>
+                                                      </object>
+                                                      <packing>
+                                                        <property name="left-attach">1</property>
+                                                        <property name="top-attach">1</property>
+                                                      </packing>
+                                                    </child>
+                                                    <child>
+                                                      <object class="GtkBox">
+                                                        <property name="visible">True</property>
+                                                        <property name="can-focus">False</property>
+                                                        <property name="halign">end</property>
+                                                        <property name="spacing">8</property>
+                                                        <child>
+                                                          <object class="GtkButton" id="restore_start">
+                                                            <property name="label" translatable="yes">Backup</property>
+                                                            <property name="visible">True</property>
+                                                            <property name="can-focus">True</property>
+                                                            <property name="receives-default">True</property>
+                                                            <style>
+                                                            <class name="suggested-action"/>
+                                                            </style>
+                                                          </object>
+                                                          <packing>
+                                                            <property name="expand">False</property>
+                                                            <property name="fill">True</property>
+                                                            <property name="position">1</property>
+                                                          </packing>
+                                                        </child>
+                                                      </object>
+                                                      <packing>
+                                                        <property name="left-attach">0</property>
+                                                        <property name="top-attach">2</property>
+                                                        <property name="width">2</property>
+                                                      </packing>
+                                                    </child>
+                                                    <child>
+                                                      <object class="GtkBox">
+                                                        <property name="visible">True</property>
+                                                        <property name="can-focus">False</property>
+                                                        <property name="orientation">vertical</property>
+                                                        <property name="spacing">8</property>
+                                                        <child>
+                                                          <object class="GtkFileChooserButton" id="restore_filepicker">
+                                                            <property name="visible">True</property>
+                                                            <property name="can-focus">False</property>
+                                                            <property name="create-folders">False</property>
+                                                            <property name="do-overwrite-confirmation">True</property>
+                                                            <property name="filter">filter_targz</property>
+                                                            <property name="preview-widget-active">False</property>
+                                                            <property name="use-preview-label">False</property>
+                                                            <property name="title" translatable="yes">Select target file</property>
+                                                          </object>
+                                                          <packing>
+                                                            <property name="expand">False</property>
+                                                            <property name="fill">True</property>
+                                                            <property name="position">0</property>
+                                                          </packing>
+                                                        </child>
+                                                        <child>
+                                                          <object class="GtkLabel" id="restore_warning">
+                                                            <property name="can-focus">False</property>
+                                                            <property name="no-show-all">True</property>
+                                                          </object>
+                                                          <packing>
+                                                            <property name="expand">False</property>
+                                                            <property name="fill">True</property>
+                                                            <property name="position">1</property>
+                                                          </packing>
+                                                        </child>
+                                                      </object>
+                                                      <packing>
+                                                        <property name="left-attach">1</property>
+                                                        <property name="top-attach">0</property>
+                                                      </packing>
+                                                    </child>
+                                                  </object>
+                                                </child>
+                                                <child type="label_item">
+                                                  <placeholder/>
+                                                </child>
                                                 <style>
-                                                  <class name="suggested-action"/>
+                                                  <class name="view"/>
                                                 </style>
                                               </object>
                                               <packing>
                                                 <property name="expand">False</property>
                                                 <property name="fill">True</property>
-                                                <property name="pack-type">end</property>
                                                 <property name="position">1</property>
                                               </packing>
                                             </child>
@@ -476,56 +585,20 @@
                                           </packing>
                                         </child>
                                         <child>
-                                          <object class="GtkFrame">
-                                            <property name="visible">True</property>
-                                            <property name="can-focus">False</property>
-                                            <property name="label-xalign">0</property>
-                                            <property name="shadow-type">in</property>
-                                            <child>
-                                              <object class="GtkListBox" id="backups_restore">
-                                                <property name="visible">True</property>
-						<property name="can-focus">False</property>
-    						<signal name="row-activated" handler="on_restore_row_activate" swapped="no"/>
-                                                <child type="placeholder">
-                                                  <object class="GtkLabel">
-                                                    <property name="visible">True</property>
-                                                    <property name="can-focus">False</property>
-                                                    <property name="margin-left">16</property>
-                                                    <property name="margin-right">16</property>
-                                                    <property name="margin-start">16</property>
-                                                    <property name="margin-end">16</property>
-                                                    <property name="margin-top">16</property>
-                                                    <property name="margin-bottom">16</property>
-                                                    <property name="label" translatable="yes">No local backups found in /var/backup. 
-
-Use the Import button to load a backup from another device</property>
-                                                    <property name="wrap">True</property>
-                                                    <style>
-                                                      <class name="dim-label"/>
-                                                    </style>
-                                                  </object>
-                                                </child>
-                                              </object>
-                                            </child>
-                                            <child type="label_item">
-                                              <placeholder/>
-                                            </child>
-                                            <style>
-                                              <class name="view"/>
-                                            </style>
-                                          </object>
-                                          <packing>
-                                            <property name="expand">False</property>
-                                            <property name="fill">True</property>
-                                            <property name="position">1</property>
-                                          </packing>
+                                          <placeholder/>
+                                        </child>
+                                        <child>
+                                          <placeholder/>
                                         </child>
                                       </object>
                                       <packing>
                                         <property name="expand">False</property>
                                         <property name="fill">True</property>
-                                        <property name="position">1</property>
+                                        <property name="position">0</property>
                                       </packing>
+                                    </child>
+                                    <child>
+                                      <placeholder/>
                                     </child>
                                     <child>
                                       <placeholder/>

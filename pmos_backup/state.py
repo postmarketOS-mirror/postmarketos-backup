@@ -6,13 +6,14 @@ import glob
 import json
 import pathlib
 import shlex
-
+import tarfile
 
 _progress_json = False
 
+
 def _progress(value, label):
     if _progress_json:
-        print(json.dumps({"progress": value, "label": label})) 
+        print(json.dumps({"progress": value, "label": label}))
         sys.stdout.flush()
     else:
         sys.stderr.write(label + "\n")
@@ -45,9 +46,9 @@ def export_backup(source, target):
 
     cmd = ['tar', '-czvf', target, '.']
     env = os.environ.copy()
-    env['GZIP'] = '-1' # Fastest gzip compression
+    env['GZIP'] = '-1'  # Fastest gzip compression
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-            universal_newlines=True, cwd=source, env=env)
+                         universal_newlines=True, cwd=source, env=env)
 
     done = 0
     while True:
@@ -57,12 +58,12 @@ def export_backup(source, target):
         done += 1
 
         if done % 3 == 0:
-            _progress((done/files)*100, "Exporting")
+            _progress((done / files) * 100, "Exporting")
 
     p.wait()
     if p.returncode != 0:
         _error("Exporting the tar archive failed")
-    
+
     if not os.path.isfile(target):
         return
 
@@ -76,7 +77,7 @@ def export_backup(source, target):
 def import_backup(source, target):
     os.makedirs(target)
     cmd = 'pv -n {} | tar -xzf - -C {}'.format(shlex.quote(source),
-            shlex.quote(target))
+                                               shlex.quote(target))
 
     p = subprocess.Popen(cmd, shell=True, stderr=subprocess.PIPE, universal_newlines=True)
 
@@ -94,23 +95,34 @@ def import_backup(source, target):
         exit(1)
 
 
-def save_system_state(target, measure=False, do_config=True, do_system=True, do_apks=True, do_homedirs=True):
+def save_system_state(target, version, measure=False, do_config=True, do_system=True, do_apks=True, do_homedirs=True):
     pscale = 1
     if not do_homedirs:
         pscale = 2
     errors = []
+    tgz = None
     if not measure:
         if not os.path.isdir(target):
-            os.makedirs(target)
+            os.makedirs(os.path.dirname(target))
+
+        with open("/etc/apk/arch") as handle:
+            arch = handle.read().strip()
+
+        headers = {
+            "arch": str(arch),
+            "backup-version": str(version),
+        }
+
+        tgz = tarfile.open(target, 'w:gz', pax_headers=headers)
     statedir = os.path.join(target, 'state')
     if not measure:
         os.makedirs(statedir)
 
         # Copy over the apk state and some metadata about the installation
         _progress(10 * pscale, 'Copying metadata')
-        shutil.copyfile('/etc/apk/world', os.path.join(statedir, 'world'))
-        shutil.copyfile('/etc/apk/repositories', os.path.join(statedir, 'repositories'))
-        shutil.copyfile('/etc/os-release', os.path.join(statedir, 'os-release'))
+        tgz.add('/etc/apk/world')
+        tgz.add('/etc/apk/repositories')
+        tgz.add('/etc/os-release')
 
     # Check for modified config
     config_size = 0
@@ -121,14 +133,11 @@ def save_system_state(target, measure=False, do_config=True, do_system=True, do_
             state, path = line.split(' ', maxsplit=1)
             if state in ['A', 'U']:
                 source = os.path.join('/', path)
-                targetf = os.path.join(statedir, path)
                 if measure:
                     if os.path.exists(source):
                         config_size += os.stat(source).st_size
                 else:
-                    if not os.path.isdir(os.path.dirname(targetf)):
-                        os.makedirs(os.path.dirname(targetf))
-                    shutil.copyfile(source, targetf, follow_symlinks=False)
+                    tgz.add(source)
 
     # Find modified system files
     system_size = 0
@@ -148,10 +157,7 @@ def save_system_state(target, measure=False, do_config=True, do_system=True, do_
                 if measure:
                     system_size += os.stat(source).st_size
                 else:
-                    targetf = os.path.join(statedir, path)
-                    if not os.path.isdir(os.path.dirname(targetf)):
-                        os.makedirs(os.path.dirname(targetf))
-                    shutil.copyfile(source, targetf, follow_symlinks=False)
+                    tgz.add(source)
 
     # Try to get sideloaded apks from the apk cache. This is not perfect yet since we can't match
     # up the version hash in the world file to the exact .apk file that was installed since the
@@ -161,7 +167,6 @@ def save_system_state(target, measure=False, do_config=True, do_system=True, do_
     if do_apks:
         _progress(40 * pscale, "Copying sideloaded packages")
         apk_cache = parse_apk_cache()
-        measure or os.makedirs(os.path.join(statedir, 'cache'))
         with open('/etc/apk/world', 'r') as handle:
             for line in handle.readlines():
                 if '><' in line:
@@ -176,8 +181,7 @@ def save_system_state(target, measure=False, do_config=True, do_system=True, do_
                             if os.path.exists(path):
                                 cache_size += os.stat(path).st_size
                         else:
-                            shutil.copyfile(path, os.path.join(statedir, 'cache',
-                                                               os.path.basename(path)))
+                            tgz.add(path)
 
     if measure:
         return {
@@ -192,12 +196,10 @@ def save_system_state(target, measure=False, do_config=True, do_system=True, do_
             handle.write('*** Copy system state ***\n')
             for error in errors:
                 handle.write(f'{error}\n')
-        return {
-            "errors": errors
-        }
+        return tgz
 
 
-def save_homedirs(target):
+def save_homedirs(target, tgz):
     errors = []
     _progress(50, "Copying homedirs")
 
@@ -208,19 +210,18 @@ def save_homedirs(target):
         dirs[:] = [d for d in dirs if d != ".cache"]
         for fname in files:
             count += 1
-            
+
     # Do the actual copy
     done = 0
     for root, dirs, files in os.walk('/home', topdown=True):
         dirs[:] = [d for d in dirs if d != ".cache"]
 
-        target_dir = os.path.join(target, root[1:])
-        os.makedirs(target_dir)
-
         for fname in files:
             path = os.path.join(root, fname)
             try:
-                shutil.copyfile(path, os.path.join(target_dir, fname), follow_symlinks=False)
+                if path == target:
+                    continue
+                tgz.add(path)
             except Exception as e:
                 errors.append(str(e))
 
@@ -237,37 +238,8 @@ def save_homedirs(target):
             handle.write(f'{error}\n')
 
 
-def write_final_metadata(target, version):
-    _progress(100, "Writing final metadata")
-
-    # Use rhash to generate a sha1sum compatible checksums file of the entire backup
-    hashes = subprocess.run(['rhash', '--sha1', '-r', '.'], cwd=target,
-                                    universal_newlines=True, stdout=subprocess.PIPE)
-    hashfile = os.path.join(target, 'checksums.sha1')
-    with open(hashfile, 'w') as handle:
-        handle.write(hashes.stdout)
-
-    # Save backup metadata in a file for quick access in the GUI
-    size = subprocess.check_output(['du', '-sh', target], universal_newlines=True)
-    size, path = size.split('\t', maxsplit=1)
-
-    with open('/etc/apk/arch') as handle:
-        arch = handle.read().strip()
-
-    metadata = {
-        "label": os.path.basename(target),
-        "size": size,
-        "version": version,
-        "arch": arch
-    }
-
-    metafile = os.path.join(target, 'metadata.json')
-    with open(metafile, 'w') as handle:
-        handle.write(json.dumps(metadata))
-
-
 def removeprefix(data, prefix):
-    if data.startswith(prefox):
+    if data.startswith(prefix):
         return data[len(prefix):]
     return data
 
@@ -327,10 +299,10 @@ def restore_packages(source, restore_sideloaded=True, cross_branch=False):
 
     with open('/etc/apk/world', 'w') as handle:
         handle.write('\n'.join(pkgs))
-    
+
     if restore_sideloaded:
         shutil.copytree(os.path.join(source, 'state/cache'), '/etc/apk/cache',
-                dirs_exist_ok=True)
+                        dirs_exist_ok=True)
 
     subprocess.run(['apk', 'fix'])
 
@@ -344,7 +316,7 @@ def restore_homedirs(source):
     for root, dirs, files in os.walk(os.path.join(source, 'home')):
         for fname in files:
             count += 1
-            
+
     # Do the actual copy
     done = 0
     for root, dirs, files in os.walk(os.path.join(source, 'home'), topdown=True):
@@ -370,34 +342,32 @@ def main(version):
     import argparse
 
     parser = argparse.ArgumentParser(description="postmarketOS backup utility backend")
-    parser.add_argument("target", help="Target/source directory for the backup")
-    parser.add_argument("--measure", help="Measure backup size instead of storing it", 
-            action="store_true")
+    parser.add_argument("target", help="Target/source .tar.gz for the backup")
+    parser.add_argument("--measure", help="Measure backup size instead of storing it",
+                        action="store_true")
     parser.add_argument("--restore", help="Restore instead of backup",
-            action="store_true")
+                        action="store_true")
     parser.add_argument("--json", help="Output json progress", action="store_true")
-    parser.add_argument("--export", help="Export backup to tar")
-    parser.add_argument("--import", help="Import backup from tar", dest="import_backup")
 
     # Options to speed up backup, everything defaults to true to ensure you'll get a
     # usable complete backup if you don't read the instructions. Most of these steps
     # only add a few kb of storage and have a time impact of <1min. Only the homedir
     # option really affects the backup size and time.
     parser.add_argument("--no-config", help="Don't backup /etc changes",
-            action="store_false", dest="config")
+                        action="store_false", dest="config")
     parser.add_argument("--no-system", help="Don't backup /usr changes",
-            action="store_false", dest="system")
+                        action="store_false", dest="system")
     parser.add_argument("--no-homedirs", help="Don't backup /home",
-            action="store_false", dest="homedir")
+                        action="store_false", dest="homedir")
     parser.add_argument("--no-apks", help="Don't backup sideloaded apks",
-            action="store_false", dest="apks")
+                        action="store_false", dest="apks")
     parser.add_argument("--no-pkgs", help="Don't restore packages (unused in backup)",
-            action="store_false", dest="pkgs")
+                        action="store_false", dest="pkgs")
     parser.add_argument("--cross-branch", help="Don't restore the repositories file",
-            action="store_true", dest="cross_branch")
+                        action="store_true", dest="cross_branch")
 
     args = parser.parse_args()
-    
+
     if args.json:
         _progress_json = True
 
@@ -415,12 +385,12 @@ def main(version):
     elif args.import_backup:
         import_backup(args.import_backup, args.target)
     else:
-        save_system_state(args.target, args.measure, args.config, args.system,
-                          args.apks, args.homedir)
+        tgz = save_system_state(args.target, args.measure, args.config, args.system,
+                                args.apks, args.homedir)
         if args.homedir:
-            save_homedirs(args.target)
+            save_homedirs(args.target, tgz)
 
-        write_final_metadata(args.target, version)
+        tgz.close()
 
 
 if __name__ == '__main__':
