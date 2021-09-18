@@ -9,3 +9,4 @@ GenericName=Backup
 Icon=org.postmarketos.Backup
 Categories=GTK;GNOME;Utility
 X-DBUS-ServiceName=org.postmarketos.Backup
+X-Purism-FormFactor=Workstation;Mobile;

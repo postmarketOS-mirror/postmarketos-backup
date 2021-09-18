@@ -14,9 +14,13 @@
     </description>
     <launchable type="desktop-id">org.postmarketos.Backup.desktop</launchable>
     <provides>
-	<binary>pmos-backup</binary>
+	      <binary>pmos-backup</binary>
         <binary>pmos-backup-gui</binary>
     </provides>
+    <custom>
+        <value key="Purism::form_factor">workstation</value>
+        <value key="Purism::form_factor">mobile</value>
+    </custom>
     <screenshots>
         <screenshot type="default">
             <image>http://brixitcdn.net/metainfo/backup.png</image>
