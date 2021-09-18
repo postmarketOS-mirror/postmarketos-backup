@@ -158,6 +158,9 @@ class BackupWindow:
         self.restore_warning = builder.get_object("restore_warning")
         self.restore_checks = {}
         self.restore_box = builder.get_object("restore_box")
+        self.restore_date = builder.get_object("restore_date")
+        self.restore_version = builder.get_object("restore_version")
+        self.restore_arch = builder.get_object("restore_arch")
 
         self.apply_css(self.window, self.provider)
         self.window.show()
@@ -237,6 +240,10 @@ class BackupWindow:
         filename = widget.get_filename()
         headers = backupinfo.get_info(filename)
 
+        self.restore_date.set_text(headers['created'] if 'created' in headers else 'n/a')
+        self.restore_version.set_text(headers['os-version'] if 'os-version' in headers else 'n/a')
+        self.restore_arch.set_text(headers['arch'] if 'arch' in headers else 'n/a')
+
         warnings = []
         allow_packages = True
         allow_system = True
@@ -277,6 +284,7 @@ class BackupWindow:
             "config": "System configuration",
             "system": "Changed system files",
             "homedir": "Home directories",
+            "sideloaded": "Sideloaded packages"
         }
         tree = {}
         for key in size.keys():
@@ -299,6 +307,10 @@ class BackupWindow:
             if len(tree[key]) == 0:
                 mark = Gtk.CheckButton(label)
                 mark.archive_key = key
+                if (key == 'system' and not allow_system) or (key == 'sideloaded' and not allow_packages):
+                    mark.set_sensitive(False)
+                else:
+                    mark.set_sensitive(True)
                 self.restore_checks[key] = mark
                 self.restore_box.pack_start(mark, False, False, 0)
                 detail = Gtk.Label("{} files, {} bytes".format(len(contents[key]), size[key]))
@@ -330,21 +342,14 @@ class BackupWindow:
             self.restore_box.pack_start(Gtk.Separator(), False, False, 0)
 
         self.restore_box.show_all()
+        self.restore_start.set_sensitive(True)
 
     def on_restore_start_clicked(self, widget):
         filename = self.restore_filepicker.get_filename()
         args = ['--restore']
-        if not self.restore_config.get_active():
-            args.append('--no-config')
-        if not self.restore_system.get_active():
-            args.append('--no-system')
-        if not self.restore_packages.get_active():
-            args.append('--no-packages')
-        if not self.restore_sideloaded.get_active():
-            args.append('--no-apks')
-        if not self.restore_homedirs.get_active():
-            args.append('--no-homedirs')
-
+        for mark in self.restore_checks:
+            if mark.get_active():
+                args.extend(['--filter', mark.archive_key])
         thread = BackupThread(filename, self.progress_update, args)
         thread.start()
         self.dialog = ProgressDialog(self.window, "Restoring backup")

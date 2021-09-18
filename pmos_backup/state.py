@@ -8,6 +8,7 @@ import pathlib
 import shlex
 import tarfile
 import time
+from datetime import datetime
 
 _progress_json = False
 
@@ -111,6 +112,7 @@ def save_system_state(target, version, measure=False, do_config=True, do_system=
         headers = {
             "arch": str(arch),
             "backup-version": str(version),
+            "created": str(datetime.now().isoformat()),
         }
 
         with open('/etc/os-release') as handle:
