@@ -264,6 +264,8 @@ class BackupWindow:
             with open('/etc/os-release') as handle:
                 distro = {}
                 for line in handle:
+                    if line.startswith('#') or line.strip() == "":
+                        continue
                     k, v = line.rstrip().split("=")
                     distro[k] = v.strip('"')
 

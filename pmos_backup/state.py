@@ -118,6 +118,8 @@ def save_system_state(target, version, measure=False, do_config=True, do_system=
         with open('/etc/os-release') as handle:
             distro = {}
             for line in handle:
+                if line.startswith('#') or line.strip() == "":
+                    continue
                 k, v = line.rstrip().split("=")
                 distro[k] = v.strip('"')
         headers['os-version'] = distro['VERSION_ID']
